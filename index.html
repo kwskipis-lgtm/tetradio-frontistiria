@@ -544,17 +544,21 @@ function TutoringLedger() {
                       {b.billing === "month" && <span style={{ color: "#9A8F72", fontSize: 11.5 }}> · μηνιαίο</span>}
                       {b.upcoming > 0 && <span style={{ color: "#9A8F72", fontSize: 11.5 }}> · προγραμματισμένα {fmtEUR(b.upcoming)}</span>}
                     </span>
-                    {b.occurred > 0 ? (
-                      <button onClick={() => setSettleTarget({ ...b, childName: cname })} style={settleBtn} title="Εξόφληση">
-                        {fmtEUR(b.occurred)} <CheckCircle2 size={13} />
-                      </button>
-                    ) : b.paidTotal > 0.005 ? (
-                      <button onClick={() => setUndoTarget({ ...b, childName: cname })} style={{ ...settleBtn, background: "#EAF1EA", color: "#5C7A5F" }} title="Αναίρεση πληρωμής">
-                        {fmtEUR(b.paidTotal)} <Undo2 size={13} />
-                      </button>
-                    ) : (
-                      <span style={{ color: "#9A8F72", fontSize: 12.5 }}>—</span>
-                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {b.occurred > 0 && (
+                        <button onClick={() => setSettleTarget({ ...b, childName: cname })} style={settleBtn} title="Εξόφληση υπολοίπου">
+                          {fmtEUR(b.occurred)} <CheckCircle2 size={13} />
+                        </button>
+                      )}
+                      {b.paidTotal > 0.005 && (
+                        <button onClick={() => setUndoTarget({ ...b, childName: cname })} style={{ ...settleBtn, background: "#EAF1EA", color: "#5C7A5F" }} title="Αναίρεση πληρωμής">
+                          {fmtEUR(b.paidTotal)} <Undo2 size={13} />
+                        </button>
+                      )}
+                      {b.occurred <= 0 && b.paidTotal <= 0.005 && (
+                        <span style={{ color: "#9A8F72", fontSize: 12.5 }}>—</span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
