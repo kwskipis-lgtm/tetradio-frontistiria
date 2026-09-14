@@ -359,7 +359,7 @@ function TutoringLedger() {
     });
 
     return { owed, paidSum, cancelledCount, bySubject };
-  }, [occurrences, subjects, monthData, todayISO, monthStarted]);
+  }, [filteredOccurrences, subjects, monthData, todayISO, monthStarted]);
 
   function toggleField(occ, field) {
     mutateMonth((current) => {
