@@ -38,7 +38,13 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const COLLECTION = "tutoring_data";
+
+// ---- demo mode: open with ?demo=1 in the URL to use a separate, empty data set,
+// completely isolated from the real family data (same file, same hosting, no risk). ----
+const urlParams = new URLSearchParams(window.location.search);
+const IS_DEMO = urlParams.get("demo") === "1";
+const COLLECTION = IS_DEMO ? "tutoring_data_demo" : "tutoring_data";
+window.APP_DEMO_MODE = IS_DEMO;
 
 // ---- storage shim: same get/set interface the app expects, backed by Firestore ----
 // Every user who opens this file with the same firebaseConfig shares the same data.
@@ -494,7 +500,14 @@ function TutoringLedger() {
     <div style={{ background: "#F7F5EF", minHeight: "100%", fontFamily: "'Iowan Old Style', 'Georgia', serif", color: "#20293A", padding: "24px 16px 60px" }}>
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0, letterSpacing: 0.2 }}>Τετράδιο φροντιστηρίων</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0, letterSpacing: 0.2 }}>
+            Τετράδιο φροντιστηρίων
+            {typeof window !== "undefined" && window.APP_DEMO_MODE && (
+              <span style={{ marginLeft: 8, fontFamily: "system-ui, sans-serif", fontSize: 11, fontWeight: 700, color: "#B5533C", border: "1px solid #B5533C", borderRadius: 5, padding: "2px 6px", verticalAlign: "middle" }}>
+                ΔΟΚΙΜΗ
+              </span>
+            )}
+          </h1>
           <div style={{ display: "flex", gap: 2 }}>
             <button onClick={refreshAll} style={headerIconBtn} aria-label="Ανανέωση"><RefreshCw size={18} /></button>
             <button onClick={() => setShowStats(true)} style={headerIconBtn} aria-label="Στατιστικά"><BarChart3 size={18} /></button>
