@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Altis — Πολιτική Απορρήτου / Privacy Policy</title>
+<link rel="icon" href="icon-192.png" type="image/png" />
+<style>
+  :root {
+    --bg: #F7F5EF;
+    --card: #FFFFFF;
+    --border: #E4DECC;
+    --ink: #20293A;
+    --muted: #6B6455;
+    --accent: #8A7A57;
+    --navy: #20293A;
+    --cream: #F7F5EF;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body {
+    font-family: 'Iowan Old Style', 'Georgia', serif;
+    color: var(--ink);
+    padding: 24px 16px 60px;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  h1 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: 0.2px; }
+  .tagline { font-family: system-ui, sans-serif; font-size: 13px; color: var(--muted); margin: 4px 0 24px; }
+  .lang-btn {
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 10px;
+    border: 1px solid #D8C9A0;
+    border-radius: 6px;
+    background: none;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+    font-family: system-ui, sans-serif;
+    line-height: 1.65;
+  }
+  .card h2 {
+    font-family: 'Iowan Old Style', 'Georgia', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 10px;
+  }
+  .card p { font-size: 14px; color: #33404F; margin: 0 0 10px; }
+  .card ul { margin: 0 0 10px; padding-left: 20px; }
+  .card li { font-size: 14px; color: #33404F; margin-bottom: 6px; }
+  .updated { font-family: system-ui, sans-serif; font-size: 12px; color: #9A8F72; margin-bottom: 20px; }
+  footer {
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+    color: #9A8F72;
+    text-align: center;
+    margin-top: 24px;
+  }
+  a { color: var(--accent); }
+  [data-lang-block] { display: none; }
+  [data-lang-block].active { display: block; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Altis</h1>
+      <button class="lang-btn" id="langToggle" onclick="toggleLang()">EN</button>
+    </header>
+
+    <div data-lang-block="el" class="active">
+      <p class="tagline">Πολιτική Απορρήτου</p>
+      <p class="updated">Τελευταία ενημέρωση: Σεπτέμβριος 2026</p>
+
+      <div class="card">
+        <h2>Τι είναι η Altis</h2>
+        <p>Η Altis («η Εφαρμογή») είναι μια εφαρμογή για την καταγραφή προγράμματος και κόστους φροντιστηρίων/δραστηριοτήτων παιδιών, που χρησιμοποιείται ιδιωτικά από την οικογένεια που τη δημιούργησε και από όσους καλεσμένους χρήστες την ανοίγουν.</p>
+      </div>
+
+      <div class="card">
+        <h2>Ποια δεδομένα αποθηκεύονται</h2>
+        <p>Η Εφαρμογή αποθηκεύει τα δεδομένα που εισάγει ο χρήστης, όπως:</p>
+        <ul>
+          <li>Ονόματα μαθημάτων/δραστηριοτήτων, ημέρες, ώρες και κόστη</li>
+          <li>Τίτλους/ονόματα (π.χ. ονόματα παιδιών) που ο χρήστης καταχωρεί ο ίδιος</li>
+          <li>Στοιχεία πληρωμών και εξοφλήσεων εντός της Εφαρμογής (μόνο ποσά, όχι στοιχεία τραπεζικών καρτών ή λογαριασμών)</li>
+        </ul>
+        <p>Η Εφαρμογή <strong>δεν συλλέγει</strong> email, ονοματεπώνυμο λογαριασμού, τηλέφωνο ή άλλα προσωπικά στοιχεία ταυτοποίησης. Η σύνδεση με τη βάση δεδομένων γίνεται μέσω ανώνυμης πιστοποίησης (anonymous authentication), χωρίς εγγραφή λογαριασμού.</p>
+      </div>
+
+      <div class="card">
+        <h2>Πού αποθηκεύονται τα δεδομένα</h2>
+        <p>Τα δεδομένα αποθηκεύονται στην υπηρεσία Firebase/Firestore της Google, με μεταφορά κρυπτογραφημένη (HTTPS). Η πρόσβαση στη βάση δεδομένων επιτρέπεται μόνο σε πιστοποιημένες (authenticated) συνδέσεις μέσω κανόνων ασφαλείας (security rules).</p>
+      </div>
+
+      <div class="card">
+        <h2>Κοινή χρήση δεδομένων</h2>
+        <p>Τα δεδομένα δεν πωλούνται, δεν ενοικιάζονται και δεν διαμοιράζονται με τρίτους για διαφημιστικούς ή εμπορικούς σκοπούς. Είναι ορατά μόνο σε όσους έχουν τον σύνδεσμο ή την εγκατάσταση της συγκεκριμένης Εφαρμογής.</p>
+      </div>
+
+      <div class="card">
+        <h2>Διαγραφή δεδομένων</h2>
+        <p>Ο χρήστης μπορεί ανά πάσα στιγμή να διαγράψει καταχωρίσεις (μαθήματα, τίτλους, έκτακτες δραστηριότητες) απευθείας μέσα από την Εφαρμογή. Για πλήρη διαγραφή όλων των αποθηκευμένων δεδομένων, μπορεί να επικοινωνήσει στο παρακάτω email.</p>
+      </div>
+
+      <div class="card">
+        <h2>Παιδιά</h2>
+        <p>Η Εφαρμογή δεν απευθύνεται άμεσα σε παιδιά και δεν συλλέγει εν γνώσει της δεδομένα απευθείας από παιδιά. Τα ονόματα παιδιών που ενδέχεται να καταχωρούνται (π.χ. ως τίτλοι προγράμματος) εισάγονται από τον ενήλικο χρήστη/γονέα.</p>
+      </div>
+
+      <div class="card">
+        <h2>Επικοινωνία</h2>
+        <p>Για οποιαδήποτε ερώτηση σχετικά με αυτή την Πολιτική Απορρήτου ή τα δεδομένα σου, επικοινώνησε στο: <a href="mailto:kwskipis@gmail.com">kwskipis@gmail.com</a></p>
+      </div>
+    </div>
+
+    <div data-lang-block="en">
+      <p class="tagline">Privacy Policy</p>
+      <p class="updated">Last updated: September 2026</p>
+
+      <div class="card">
+        <h2>What Altis is</h2>
+        <p>Altis ("the App") is an app for tracking the schedule and cost of children's tutoring lessons and activities, used privately by the family who built it and by any guest users who open it.</p>
+      </div>
+
+      <div class="card">
+        <h2>What data is stored</h2>
+        <p>The App stores the data entered by the user, such as:</p>
+        <ul>
+          <li>Lesson/activity names, days, times, and costs</li>
+          <li>Titles/names (e.g. children's names) entered by the user themselves</li>
+          <li>Payment and settlement records within the App (amounts only — no bank card or account details)</li>
+        </ul>
+        <p>The App <strong>does not collect</strong> email addresses, account names, phone numbers, or other personal identifying information. Connection to the database uses anonymous authentication, with no account sign-up.</p>
+      </div>
+
+      <div class="card">
+        <h2>Where data is stored</h2>
+        <p>Data is stored using Google's Firebase/Firestore service, transmitted over an encrypted connection (HTTPS). Database access is restricted to authenticated connections via security rules.</p>
+      </div>
+
+      <div class="card">
+        <h2>Data sharing</h2>
+        <p>Data is not sold, rented, or shared with third parties for advertising or commercial purposes. It is only visible to those who have the link or installation of this specific App.</p>
+      </div>
+
+      <div class="card">
+        <h2>Data deletion</h2>
+        <p>Users can delete entries (lessons, titles, extra activities) at any time directly within the App. To request deletion of all stored data, contact the email below.</p>
+      </div>
+
+      <div class="card">
+        <h2>Children</h2>
+        <p>The App is not directed at children and does not knowingly collect data directly from children. Any children's names that may be entered (e.g. as schedule titles) are entered by the adult user/parent.</p>
+      </div>
+
+      <div class="card">
+        <h2>Contact</h2>
+        <p>For any question about this Privacy Policy or your data, contact: <a href="mailto:kwskipis@gmail.com">kwskipis@gmail.com</a></p>
+      </div>
+    </div>
+
+    <footer>Altis</footer>
+  </div>
+
+  <script>
+    function toggleLang() {
+      var current = document.querySelector('[data-lang-block].active').getAttribute('data-lang-block');
+      var next = current === 'el' ? 'en' : 'el';
+      document.querySelectorAll('[data-lang-block]').forEach(function (el) {
+        el.classList.toggle('active', el.getAttribute('data-lang-block') === next);
+      });
+      document.documentElement.lang = next;
+      document.getElementById('langToggle').textContent = next === 'el' ? 'EN' : 'ΕΛ';
+      try { localStorage.setItem('altis_privacy_lang', next); } catch (e) {}
+    }
+    (function () {
+      var saved;
+      try { saved = localStorage.getItem('altis_privacy_lang'); } catch (e) {}
+      if (saved === 'en') toggleLang();
+    })();
+  </script>
+</body>
+</html>

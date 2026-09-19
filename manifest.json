@@ -1,6 +1,6 @@
 {
-  "name": "Τετράδιο φροντιστηρίων",
-  "short_name": "Τετράδιο",
+  "name": "Altis",
+  "short_name": "Altis",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1B2331",
