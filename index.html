@@ -39,26 +39,36 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ---- demo mode: open with ?demo=1 in the URL to use a separate, empty data set,
-// completely isolated from the real family data (same file, same hosting, no risk). ----
+// ---- demo mode: open with ?demo=1 to preview with anonymous auth + an isolated,
+// throwaway data set (same behaviour as the single-family Altis demo). ----
 const urlParams = new URLSearchParams(window.location.search);
 const IS_DEMO = urlParams.get("demo") === "1";
-const COLLECTION = IS_DEMO ? "tutoring_data_demo" : "tutoring_data";
+const DEMO_COLLECTION = "tutoring_data_demo";
 window.APP_DEMO_MODE = IS_DEMO;
 
-// ---- storage shim: same get/set interface the app expects, backed by Firestore ----
-// Every user who opens this file with the same firebaseConfig shares the same data.
+// ---- Multi-family storage shim ----
+// In real (non-demo) mode, each family's data lives at app_families/{FAMILY_CODE}/data/{key},
+// isolated from every other family by Firestore security rules (only members of that family
+// can read/write it). window.__familyCollectionRef is set once by FamilyGate, after the
+// signed-in user's family has been resolved (created or joined) — until then, storage calls
+// are simply not made (the UI shows the login/family screen instead).
+window.__familyCollectionRef = null;
+
 window.storage = {
   get: async (key) => {
     try {
-      const snap = await db.collection(COLLECTION).doc(key).get();
+      const colRef = IS_DEMO ? db.collection(DEMO_COLLECTION) : window.__familyCollectionRef;
+      if (!colRef) return null;
+      const snap = await colRef.doc(key).get();
       if (!snap.exists) return null;
       return { key, value: snap.data().value, shared: true };
     } catch (e) { console.error("storage.get failed", e); return null; }
   },
   set: async (key, value) => {
     try {
-      await db.collection(COLLECTION).doc(key).set({ value, updatedAt: Date.now() });
+      const colRef = IS_DEMO ? db.collection(DEMO_COLLECTION) : window.__familyCollectionRef;
+      if (!colRef) return null;
+      await colRef.doc(key).set({ value, updatedAt: Date.now() });
       return { key, value, shared: true };
     } catch (e) { console.error("storage.set failed", e); return null; }
   },
@@ -87,7 +97,9 @@ const Circle = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10" /></IconBa
 const Trash2 = (p) => <IconBase {...p}><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></IconBase>;
 const Pencil = (p) => <IconBase {...p}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></IconBase>;
 const BarChart3 = (p) => <IconBase {...p}><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></IconBase>;
+const UserIcon = (p) => <IconBase {...p}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></IconBase>;
 const { useState, useEffect, useMemo } = React;
+
 
 
 const MONTHS = {
@@ -113,6 +125,22 @@ const CATEGORY_LABELS = {
   el: { "Μάθημα": "Μάθημα", "Αθλητισμός": "Αθλητισμός", "Τέχνες": "Τέχνες", "Άλλο": "Άλλο" },
   en: { "Μάθημα": "Lesson", "Αθλητισμός": "Sports", "Τέχνες": "Arts", "Άλλο": "Other" },
 };
+const CATEGORY_HINTS = {
+  el: {
+    "Μάθημα": "Σχολικά μαθήματα και γλώσσες. Π.χ. φροντιστήριο, ιδιαίτερα, αγγλικά, μαθηματικά.",
+    "Αθλητισμός": "Κάθε άθλημα ή γυμναστική. Π.χ. μπάσκετ, κολύμβηση, ποδόσφαιρο, τένις, πολεμικές τέχνες.",
+    "Τέχνες": "Μουσική και δημιουργικές δραστηριότητες. Π.χ. πιάνο, κιθάρα, ζωγραφική, χορός, θέατρο.",
+    "Άλλο": "Ό,τι δεν ταιριάζει στα παραπάνω. Π.χ. προγραμματισμός, σκάκι, ρομποτική, κατασκήνωση.",
+  },
+  en: {
+    "Μάθημα": "School subjects and languages. E.g. tutoring, private lessons, English, maths.",
+    "Αθλητισμός": "Any sport or fitness. E.g. basketball, swimming, football, tennis, martial arts.",
+    "Τέχνες": "Music and creative activities. E.g. piano, guitar, painting, dance, theatre.",
+    "Άλλο": "Anything that doesn't fit above. E.g. coding, chess, robotics, summer camp.",
+  },
+};
+function catHint(lang, cat) { return (CATEGORY_HINTS[lang] || CATEGORY_HINTS.el)[cat] || ""; }
+
 function catLabel(lang, cat) { return (CATEGORY_LABELS[lang] || CATEGORY_LABELS.el)[cat] || cat; }
 
 const SUBJECT_COLORS = ["#B5533C", "#4E6E8E", "#6B8F71", "#8A7A57", "#8E5A8A", "#B08A3E", "#3F8280", "#A85C7A"];
@@ -120,11 +148,11 @@ const SUBJECT_COLORS = ["#B5533C", "#4E6E8E", "#6B8F71", "#8A7A57", "#8E5A8A", "
 const STRINGS = {
   el: {
     appName: "Altis", tagline: "Τετράδιο φροντιστηρίων",
-    subtitle: "Πρόγραμμα, κόστος και ιστορικό ανά μήνα · κοινόχρηστο για όσους ανοίγουν αυτή τη σελίδα.",
+    subtitle: "Πρόγραμμα, κόστος και ιστορικό ανά μήνα · ιδιωτικά, μόνο για την οικογένειά σου.",
     demoBadge: "ΔΟΚΙΜΗ",
-    refresh: "Ανανέωση", stats: "Στατιστικά", titles: "Τίτλοι", subjectsBtn: "Μαθήματα",
+    refresh: "Ανανέωση", stats: "Στατιστικά", titles: "Παιδιά", subjectsBtn: "Μαθήματα & δραστηριότητες", accountBtn: "Λογαριασμός",
     prevMonth: "Προηγούμενος μήνας", nextMonth: "Επόμενος μήνας",
-    allTitles: "Όλοι οι τίτλοι", allCategories: "Όλες οι κατηγορίες",
+    allTitles: "Όλα τα παιδιά", allCategories: "Όλες οι κατηγορίες",
     monthTotalDue: "Σύνολο οφειλής μήνα",
     monthlySuffix: "μηνιαίο", upcomingPrefix: "προγραμματισμένα",
     settleTooltip: "Εξόφληση υπολοίπου", undoTooltip: "Αναίρεση πληρωμής",
@@ -133,30 +161,72 @@ const STRINGS = {
     loading: "Φόρτωση…",
     emptyStatePre: "Δεν έχεις ορίσει ακόμα μαθήματα. Πάτησε το",
     emptyStatePost: "πάνω δεξιά για να προσθέσεις το πρώτο, με τις μέρες και ώρες του.",
+    reminderLabel: "Υπενθύμιση",
+    reminderHelp: "Ειδοποίηση στο κινητό πριν ξεκινήσει το μάθημα. Ρυθμίζεται ξεχωριστά για κάθε μάθημα. Φτάνει μέσω του ημερολογίου του κινητού σου (δες «Εξαγωγή υπενθυμίσεων» στη λίστα μαθημάτων).",
+    reminderWord: "υπενθύμιση",
+    remindersExportTitle: "Υπενθυμίσεις στο κινητό",
+    remindersExportHelp: "Κατεβάζει τα επόμενα μαθήματα που έχουν υπενθύμιση. Άνοιξε το αρχείο με το Ημερολόγιο του κινητού (Google ή Apple) και θα χτυπά πριν από κάθε μάθημα, ακόμα και χωρίς internet. Τον ήχο τον ορίζεις στις ρυθμίσεις ειδοποιήσεων του Ημερολογίου.",
+    remindersExportNote: "Όταν αλλάξεις πρόγραμμα ή ακυρώσεις μάθημα, κατέβασέ το ξανά. Τα ίδια μαθήματα ενημερώνονται χωρίς να διπλασιάζονται, αλλά ένα ακυρωμένο μάθημα που έχεις ήδη εισάγει πρέπει να το σβήσεις από το Ημερολόγιο.",
+    remindersExportBtn: "Εξαγωγή υπενθυμίσεων (.ics)",
+    remindersExportDone: (n) => `Έτοιμο: ${n} μαθήματα στο αρχείο. Άνοιξέ το για να μπουν στο Ημερολόγιο.`,
+    remindersExportNone: "Δεν βρέθηκαν επερχόμενα μαθήματα με υπενθύμιση.",
+    remindersEventDesc: (m) => `Υπενθύμιση από το Altis (${m} λεπτά πριν)`,
+    historyBtn: "Ιστορικό πληρωμών", historyHeader: "Ιστορικό πληρωμών",
+    historyEmpty: "Καμία πληρωμή καταγεγραμμένη για αυτό το έτος.",
+    historyNote: "Καταγράφονται οι πληρωμές που σημειώνεις από τώρα και στο εξής.",
+    netPaid: "Καθαρό σύνολο πληρωμών", exportCsv: "Εξαγωγή σε Excel (CSV)",
+    reversalTag: "αναίρεση",
+    csvDate: "Ημερομηνία", csvChild: "Παιδί", csvActivity: "Δραστηριότητα", csvAmount: "Ποσό (€)",
+    csvType: "Είδος", csvForMonth: "Για μήνα", csvLessonDate: "Ημ. μαθήματος", csvPay: "Πληρωμή", csvUndo: "Αναίρεση",
+    deleteAccount: "Διαγραφή λογαριασμού",
+    deleteWarnSole: "Θα διαγραφούν οριστικά ο λογαριασμός σου ΚΑΙ όλα τα δεδομένα της οικογένειας (παιδιά, μαθήματα, πληρωμές). Δεν μπορεί να αναιρεθεί.",
+    deleteWarnShared: "Θα διαγραφεί μόνο ο δικός σου λογαριασμός. Τα δεδομένα της οικογένειας παραμένουν για τον/την άλλο γονιό.",
+    deletePasswordLabel: "Γράψε τον κωδικό σου για επιβεβαίωση",
+    deleteConfirmBtn: "Οριστική διαγραφή", deleteBusy: "Διαγραφή…",
+    deleteWrongPw: "Λάθος κωδικός.", deleteFailed: "Η διαγραφή απέτυχε. Δοκίμασε ξανά.",
+    carryLabel: "Υπόλοιπο από προηγούμενους μήνες",
+    carryHint: "Πάτα σε έναν μήνα για να πας εκεί και να τον εξοφλήσεις.",
+    grandTotalLabel: "Γενικό σύνολο οφειλής",
+    welcomeTitle: "Καλώς ήρθες στο Altis",
+    welcomeIntro: "Ας στήσουμε το πρόγραμμα της οικογένειας σε δύο απλά βήματα:",
+    welcomeStep1: "Πρόσθεσε ένα παιδί",
+    welcomeStep2: "Πρόσθεσε τα μαθήματα ή τις δραστηριότητές του, με μέρες και ώρες",
+    welcomeAfter: "Μετά θα βλέπεις τα μαθήματα στο ημερολόγιο και το κόστος του μήνα, και θα σημειώνεις ποια έγιναν, ποια ακυρώθηκαν και τι έχεις πληρώσει.",
+    welcomeStart: "Ξεκίνα τώρα",
+    accountTitle: "Λογαριασμός", signedInAs: "Συνδεδεμένος ως",
+    familyCodeLabel: "Κωδικός οικογένειας",
+    familyCodeHelp: "Δώσε αυτόν τον κωδικό στον/στη σύζυγο, ώστε να μπει στα ίδια δεδομένα. Μια οικογένεια έχει μέχρι 2 χρήστες. Μην τον μοιράζεσαι με άλλους.",
+    copyCode: "Αντιγραφή", copiedCode: "Αντιγράφηκε",
+    privacyNote: "Τα δεδομένα σου είναι ορατά μόνο στα μέλη της οικογένειάς σου.",
+    signOut: "Αποσύνδεση",
     tapHint: "Πάτα σε μια ημέρα του ημερολογίου για να ακυρώσεις ή να εξοφλήσεις ένα συγκεκριμένο μάθημα.",
     saveFail: "Η αποθήκευση απέτυχε. Δοκίμασε ξανά.",
     extraTag: "έκτακτο", cancelledTag: "ακυρώθηκε", paidTag: "εξοφλήθηκε", partialTag: "μερική εξόφληση",
     billedMonthly: "χρεώνεται μηνιαία",
     fullSettle: "Πλήρης εξόφληση", undoPayment: "Αναίρεση πληρωμής",
     restore: "Επαναφορά", cancelAction: "Ακύρωση", deleteAction: "Διαγραφή",
-    titlesHeader: "Τίτλοι",
-    titlesEmptyHint: "Πρόσθεσε τίτλους (π.χ. τα ονόματα των παιδιών) — κάθε τίτλος έχει από κάτω το δικό του πρόγραμμα μαθημάτων/δραστηριοτήτων.",
-    newTitlePlaceholder: "Νέος τίτλος",
+    titlesHeader: "Παιδιά",
+    titlesEmptyHint: "Πρόσθεσε τα παιδιά σου με το όνομά τους. Κάθε παιδί έχει το δικό του πρόγραμμα μαθημάτων και δραστηριοτήτων.",
+    newTitlePlaceholder: "Όνομα παιδιού",
     subjectsHeader: "Μαθήματα & δραστηριότητες",
-    subjectsEmptyHint: "Πρόσθεσε πρώτα έναν τίτλο (π.χ. το όνομα ενός παιδιού) — από κάτω του θα φτιάχνεις το δικό του πρόγραμμα.",
-    newTitleForChildPlaceholder: "Νέος τίτλος (π.χ. όνομα παιδιού)",
+    subjectsEmptyHint: "Ξεκίνα προσθέτοντας ένα παιδί. Μετά, με το + δίπλα στο όνομά του, θα προσθέσεις τα μαθήματα και τις δραστηριότητές του με τις μέρες και τις ώρες τους.",
+    newTitleForChildPlaceholder: "Όνομα παιδιού (π.χ. Μαρία)",
     editAction: "Επεξεργασία",
     perMonth: "/μήνα", perLesson: "/μάθημα",
     fromDate: "από", untilDate: "έως", noStart: "χωρίς έναρξη", noEnd: "χωρίς λήξη",
-    newEntryFor: (name) => `Νέα καταχώριση για ${name}`,
-    noEntriesYet: "Καμία καταχώριση ακόμα — πάτα το + για να προσθέσεις.",
-    untitled: "Χωρίς τίτλο",
-    newEntry: "Νέα καταχώριση",
-    untitledEntriesHint: "Καταχωρίσεις χωρίς συγκεκριμένο τίτλο θα εμφανίζονται εδώ.",
-    editEntry: "Επεξεργασία καταχώρισης",
-    nameLabel: "Όνομα", namePlaceholder: "π.χ. Χημεία, Κολύμβηση",
-    categoryLabel: "Κατηγορία", titleLabel: "Τίτλος",
-    billingLabel: "Τρόπος χρέωσης", perLessonBtn: "Ανά μάθημα", flatMonthlyBtn: "Σταθερό ανά μήνα",
+    newEntryFor: (name) => `Νέο μάθημα ή δραστηριότητα για ${name}`,
+    noEntriesYet: "Κανένα μάθημα ακόμα — πάτα το + για να προσθέσεις.",
+    untitled: "Χωρίς παιδί (γενικά)",
+    newEntry: "Νέο μάθημα ή δραστηριότητα",
+    untitledEntriesHint: "Μαθήματα που δεν ανήκουν σε συγκεκριμένο παιδί εμφανίζονται εδώ.",
+    editEntry: "Επεξεργασία",
+    nameLabel: "Τι είναι; (όνομα)", namePlaceholder: "π.χ. Αγγλικά, Μπάσκετ, Πιάνο",
+    categoryLabel: "Τι είδους δραστηριότητα είναι;",
+    categoryHelp: "Βοηθά στα στατιστικά, ώστε να βλέπεις πόσα ξοδεύεις ανά είδος.",
+    titleLabel: "Για ποιο παιδί;",
+    billingLabel: "Πώς πληρώνεις;", perLessonBtn: "Ανά μάθημα", flatMonthlyBtn: "Σταθερό ανά μήνα",
+    billingHint: "«Ανά μάθημα»: πληρώνεις για κάθε φορά που γίνεται (π.χ. ιδιαίτερα). «Σταθερό ανά μήνα»: το ίδιο ποσό κάθε μήνα, όσα μαθήματα κι αν γίνουν (π.χ. συνδρομή ακαδημίας).",
+    slotsHint: "Πρόσθεσε τις μέρες και τις ώρες που γίνεται κάθε εβδομάδα. Θα εμφανιστούν αυτόματα στο ημερολόγιο.",
     costPerMonth: "Κόστος ανά μήνα (€)", costPerLesson: "Κόστος ανά μάθημα (€)",
     validityPeriod: "Περίοδος ισχύος (προαιρετικό)", startLabel: "Έναρξη", endLabel: "Λήξη",
     validityHint: "Άσε κενό αν δεν έχει όριο. Χρήσιμο όταν ξεκινά στα μέσα του μήνα ή σταματά το καλοκαίρι — εκτός αυτής της περιόδου δεν χρεώνεται καθόλου.",
@@ -168,7 +238,7 @@ const STRINGS = {
     dateLabel: "Ημερομηνία", costLabel: "Κόστος (€)",
     commentLabel: "Σχόλιο (π.χ. αναπλήρωση)",
     statsHeader: "Στατιστικά", calculating: "Υπολογισμός…", yearTotal: "Σύνολο έτους",
-    byCategory: "Ανά κατηγορία", byTitle: "Ανά τίτλο",
+    byCategory: "Ανά κατηγορία", byTitle: "Ανά παιδί",
     settleConfirmHeader: "Επιβεβαίωση εξόφλησης",
     monthFlatNote: "Σταθερή μηνιαία χρέωση για τον τρέχοντα μήνα.",
     lessonsOwed: (count, amount) => `Οφειλή ${count} μαθήματ${count === 1 ? "ος" : "ων"} που έχ${count === 1 ? "ει" : "ουν"} ήδη γίνει: ${amount}`,
@@ -185,11 +255,11 @@ const STRINGS = {
   },
   en: {
     appName: "Altis", tagline: "Tutoring Notebook",
-    subtitle: "Schedule, cost and history by month · shared with everyone who opens this page.",
+    subtitle: "Schedule, cost and history by month · private, just for your family.",
     demoBadge: "DEMO",
-    refresh: "Refresh", stats: "Statistics", titles: "Titles", subjectsBtn: "Subjects",
+    refresh: "Refresh", stats: "Statistics", titles: "Children", subjectsBtn: "Lessons & activities", accountBtn: "Account",
     prevMonth: "Previous month", nextMonth: "Next month",
-    allTitles: "All titles", allCategories: "All categories",
+    allTitles: "All children", allCategories: "All categories",
     monthTotalDue: "Total due this month",
     monthlySuffix: "monthly", upcomingPrefix: "upcoming",
     settleTooltip: "Settle balance", undoTooltip: "Undo payment",
@@ -198,30 +268,72 @@ const STRINGS = {
     loading: "Loading…",
     emptyStatePre: "You haven't set up any lessons yet. Tap the",
     emptyStatePost: "icon top right to add your first one, with its days and times.",
+    reminderLabel: "Reminder",
+    reminderHelp: "A phone alert before the lesson starts. Set separately for each lesson. It reaches your phone through your calendar app (see \"Export reminders\" in the lessons list).",
+    reminderWord: "reminder",
+    remindersExportTitle: "Reminders on your phone",
+    remindersExportHelp: "Downloads the upcoming lessons that have a reminder. Open the file with your phone's Calendar (Google or Apple) and it will alert you before each lesson, even without internet. You set the sound in the Calendar's notification settings.",
+    remindersExportNote: "When you change the schedule or cancel a lesson, download it again. The same lessons are updated rather than duplicated, but a cancelled lesson you already imported must be deleted from the Calendar.",
+    remindersExportBtn: "Export reminders (.ics)",
+    remindersExportDone: (n) => `Done: ${n} lessons in the file. Open it to add them to your Calendar.`,
+    remindersExportNone: "No upcoming lessons with a reminder were found.",
+    remindersEventDesc: (m) => `Reminder from Altis (${m} minutes before)`,
+    historyBtn: "Payment history", historyHeader: "Payment history",
+    historyEmpty: "No payments recorded for this year.",
+    historyNote: "Payments you mark from now on are recorded here.",
+    netPaid: "Net total paid", exportCsv: "Export to Excel (CSV)",
+    reversalTag: "reversal",
+    csvDate: "Date", csvChild: "Child", csvActivity: "Activity", csvAmount: "Amount (€)",
+    csvType: "Type", csvForMonth: "For month", csvLessonDate: "Lesson date", csvPay: "Payment", csvUndo: "Reversal",
+    deleteAccount: "Delete account",
+    deleteWarnSole: "Your account AND all of the family's data (children, lessons, payments) will be permanently deleted. This cannot be undone.",
+    deleteWarnShared: "Only your own account will be deleted. The family's data stays available to your partner.",
+    deletePasswordLabel: "Enter your password to confirm",
+    deleteConfirmBtn: "Delete permanently", deleteBusy: "Deleting…",
+    deleteWrongPw: "Wrong password.", deleteFailed: "Deletion failed. Please try again.",
+    carryLabel: "Balance from previous months",
+    carryHint: "Tap a month to go there and settle it.",
+    grandTotalLabel: "Total amount due",
+    welcomeTitle: "Welcome to Altis",
+    welcomeIntro: "Let's set up your family's schedule in two simple steps:",
+    welcomeStep1: "Add a child",
+    welcomeStep2: "Add their lessons or activities, with days and times",
+    welcomeAfter: "Then you'll see the lessons on the calendar and the month's cost, and you can mark which took place, which were cancelled and what you've paid.",
+    welcomeStart: "Get started",
+    accountTitle: "Account", signedInAs: "Signed in as",
+    familyCodeLabel: "Family code",
+    familyCodeHelp: "Give this code to your partner so they can join the same data. A family has up to 2 users. Don't share it with anyone else.",
+    copyCode: "Copy", copiedCode: "Copied",
+    privacyNote: "Your data is visible only to the members of your family.",
+    signOut: "Sign out",
     tapHint: "Tap a day on the calendar to cancel or settle a specific lesson.",
     saveFail: "Save failed. Please try again.",
     extraTag: "extra", cancelledTag: "cancelled", paidTag: "paid", partialTag: "partial payment",
     billedMonthly: "billed monthly",
     fullSettle: "Mark as paid", undoPayment: "Undo payment",
     restore: "Restore", cancelAction: "Cancel", deleteAction: "Delete",
-    titlesHeader: "Titles",
-    titlesEmptyHint: "Add titles (e.g. your children's names) — each title has its own lesson/activity schedule below it.",
-    newTitlePlaceholder: "New title",
+    titlesHeader: "Children",
+    titlesEmptyHint: "Add your children by name. Each child has their own schedule of lessons and activities.",
+    newTitlePlaceholder: "Child's name",
     subjectsHeader: "Lessons & activities",
-    subjectsEmptyHint: "First add a title (e.g. a child's name) — you'll build their schedule underneath it.",
-    newTitleForChildPlaceholder: "New title (e.g. child's name)",
+    subjectsEmptyHint: "Start by adding a child. Then use the + next to their name to add their lessons and activities with days and times.",
+    newTitleForChildPlaceholder: "Child's name (e.g. Maria)",
     editAction: "Edit",
     perMonth: "/month", perLesson: "/lesson",
     fromDate: "from", untilDate: "until", noStart: "no start date", noEnd: "no end date",
-    newEntryFor: (name) => `New entry for ${name}`,
-    noEntriesYet: "No entries yet — tap + to add one.",
-    untitled: "Untitled",
-    newEntry: "New entry",
-    untitledEntriesHint: "Entries without a specific title will appear here.",
-    editEntry: "Edit entry",
-    nameLabel: "Name", namePlaceholder: "e.g. Chemistry, Swimming",
-    categoryLabel: "Category", titleLabel: "Title",
-    billingLabel: "Billing method", perLessonBtn: "Per lesson", flatMonthlyBtn: "Flat monthly",
+    newEntryFor: (name) => `New lesson or activity for ${name}`,
+    noEntriesYet: "No lessons yet — tap + to add one.",
+    untitled: "No child (general)",
+    newEntry: "New lesson or activity",
+    untitledEntriesHint: "Lessons that don't belong to a specific child appear here.",
+    editEntry: "Edit",
+    nameLabel: "What is it? (name)", namePlaceholder: "e.g. English, Basketball, Piano",
+    categoryLabel: "What kind of activity is it?",
+    categoryHelp: "This feeds the statistics, so you can see how much you spend on each kind.",
+    titleLabel: "Which child?",
+    billingLabel: "How do you pay?", perLessonBtn: "Per lesson", flatMonthlyBtn: "Flat monthly",
+    billingHint: "\"Per lesson\": you pay each time it takes place (e.g. private lessons). \"Flat monthly\": the same amount every month however many sessions happen (e.g. an academy fee).",
+    slotsHint: "Add the days and times it takes place each week. They will appear on the calendar automatically.",
     costPerMonth: "Cost per month (€)", costPerLesson: "Cost per lesson (€)",
     validityPeriod: "Validity period (optional)", startLabel: "Start", endLabel: "End",
     validityHint: "Leave blank if there's no limit. Useful when it starts mid-month or stops for summer — outside this period there is no charge at all.",
@@ -233,7 +345,7 @@ const STRINGS = {
     dateLabel: "Date", costLabel: "Cost (€)",
     commentLabel: "Comment (e.g. makeup lesson)",
     statsHeader: "Statistics", calculating: "Calculating…", yearTotal: "Year total",
-    byCategory: "By category", byTitle: "By title",
+    byCategory: "By category", byTitle: "By child",
     settleConfirmHeader: "Confirm settlement",
     monthFlatNote: "Flat monthly charge for the current month.",
     lessonsOwed: (count, amount) => `Amount owed for ${count} lesson${count === 1 ? "" : "s"} already held: ${amount}`,
@@ -319,6 +431,146 @@ function generateOccurrences(year, monthIdx, subjects, monthData) {
   return list;
 }
 
+// Unpaid balance carried over from the months BEFORE the viewed month (already-held lessons and
+// already-started monthly fees only). Looks back up to CARRY_LOOKBACK months.
+// A subject only counts from: its startDate; else the month it was created (createdAt);
+// else (older data) the earliest month that has any saved record — so months before the app
+// was ever used are never shown as owed.
+const REMINDER_OPTIONS = [0, 10, 15, 30, 45, 60, 120, 1440];
+function reminderLabel(lang, m) {
+  const el = lang === "el";
+  if (!m) return el ? "Χωρίς υπενθύμιση" : "No reminder";
+  if (m === 1440) return el ? "1 μέρα πριν" : "1 day before";
+  if (m >= 60 && m % 60 === 0) {
+    const h = m / 60;
+    return el ? (h === 1 ? "1 ώρα πριν" : `${h} ώρες πριν`) : (h === 1 ? "1 hour before" : `${h} hours before`);
+  }
+  return el ? `${m} λεπτά πριν` : `${m} minutes before`;
+}
+
+function icsEscape(v) {
+  return String(v == null ? "" : v).replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+}
+// RFC 5545: lines are folded at 75 octets; continuation lines start with a space.
+function icsFold(line) {
+  const enc = new TextEncoder();
+  let out = "", cur = "", bytes = 0;
+  for (const ch of line) {
+    const b = enc.encode(ch).length;
+    if (bytes + b > 72) { out += cur + "\r\n "; cur = ""; bytes = 0; }
+    cur += ch; bytes += b;
+  }
+  return out + cur;
+}
+function localISO(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+
+// Builds an .ics calendar with the upcoming (non-cancelled) lessons of every subject that has a
+// reminder, each with its own alarm lead time. Stable UIDs let calendar apps update, not duplicate.
+async function buildRemindersIcs({ subjects, children, lang, days }) {
+  const t = STRINGS[lang];
+  const byId = {};
+  subjects.forEach((sj) => { if (Number(sj.reminderMinutes) > 0) byId[sj.id] = sj; });
+  const withRem = Object.values(byId);
+  if (withRem.length === 0) return { text: null, count: 0 };
+
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const end = new Date(start); end.setDate(end.getDate() + days);
+  const todayISO = localISO(start), endISO = localISO(end);
+
+  const monthsToLoad = [];
+  for (let d = new Date(start.getFullYear(), start.getMonth(), 1); d <= end; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+    monthsToLoad.push({ year: d.getFullYear(), month: d.getMonth() });
+  }
+  const results = await Promise.all(
+    monthsToLoad.map((m) => window.storage.get(`month:${monthKey2(m.year, m.month)}`, true).catch(() => null))
+  );
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const childById = {};
+  (children || []).forEach((c) => { childById[c.id] = c.name; });
+  const dt = (iso, hm) => iso.replace(/-/g, "") + "T" + hm.replace(":", "") + "00";
+
+  const rows = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Altis//Reminders//EL", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Altis"];
+  let count = 0;
+  monthsToLoad.forEach((m, i) => {
+    let data = { overrides: {}, extras: [], monthlyPayments: {} };
+    try { if (results[i] && results[i].value) data = JSON.parse(results[i].value); } catch (e) {}
+    generateOccurrences(m.year, m.month, withRem, data)
+      .filter((o) => !o.cancelled && o.date >= todayISO && o.date <= endISO && o.subjectId && byId[o.subjectId])
+      .forEach((o) => {
+        const mins = Number(byId[o.subjectId].reminderMinutes);
+        const child = childById[o.childId];
+        const summary = o.name + (child ? " · " + child : "");
+        rows.push(
+          "BEGIN:VEVENT",
+          `UID:${o.key}@altis.app`,
+          `DTSTAMP:${stamp}`,
+          `DTSTART:${dt(o.date, o.start)}`,
+          `DTEND:${dt(o.date, o.end)}`,
+          `SUMMARY:${icsEscape(summary)}`,
+          `DESCRIPTION:${icsEscape(t.remindersEventDesc(mins))}`,
+          "BEGIN:VALARM",
+          `TRIGGER:-PT${mins}M`,
+          "ACTION:DISPLAY",
+          `DESCRIPTION:${icsEscape(summary)}`,
+          "END:VALARM",
+          "END:VEVENT"
+        );
+        count++;
+      });
+  });
+  rows.push("END:VCALENDAR");
+  return { text: rows.map(icsFold).join("\r\n") + "\r\n", count };
+}
+
+// Appends a payment record (signed amount: + paid, - reversed) to a month's data.
+function addPaymentLog(current, entry) {
+  return { ...current, payments: [...(current.payments || []), { id: uid(), ts: Date.now(), ...entry }] };
+}
+
+const CARRY_LOOKBACK = 24;
+async function computeCarryover({ subjects, cursor, filterChild, filterCategory, todayISO }) {
+  const y0 = cursor.getFullYear(), m0 = cursor.getMonth();
+  const slots = [];
+  for (let i = CARRY_LOOKBACK; i >= 1; i--) {
+    const d = new Date(y0, m0 - i, 1);
+    slots.push({ year: d.getFullYear(), month: d.getMonth() });
+  }
+  const results = await Promise.all(
+    slots.map((sl) => window.storage.get(`month:${monthKey2(sl.year, sl.month)}`, true).catch(() => null))
+  );
+  const datas = results.map((r) => { try { return r && r.value ? JSON.parse(r.value) : null; } catch (e) { return null; } });
+  const firstDocIdx = datas.findIndex((d) => d);
+  const legacyStart = firstDocIdx >= 0 ? `${slots[firstDocIdx].year}-${pad2(slots[firstDocIdx].month + 1)}-01` : null;
+  const eff = subjects.map((sj) => {
+    if (sj.startDate) return sj;
+    if (sj.createdAt) { const d = new Date(sj.createdAt); return { ...sj, startDate: `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-01` }; }
+    return { ...sj, startDate: legacyStart || "9999-12-31" };
+  });
+  const now = new Date();
+  const months = [];
+  let total = 0;
+  slots.forEach((sl, i) => {
+    const data = datas[i] || { overrides: {}, extras: [], monthlyPayments: {} };
+    const occs = generateOccurrences(sl.year, sl.month, eff, data).filter((o) =>
+      (filterChild === "all" || o.childId === filterChild) &&
+      (filterCategory === "all" || (o.category || CATEGORIES[0]) === filterCategory)
+    );
+    const started = sl.year < now.getFullYear() || (sl.year === now.getFullYear() && sl.month <= now.getMonth());
+    let owed = 0;
+    eff.forEach((sj) => {
+      if ((sj.billing || "lesson") !== "month" || !started) return;
+      if (!occs.some((o) => o.subjectId === sj.id)) return;
+      const cost = Number(sj.cost || 0);
+      const paid = Math.min(cost, Number((data.monthlyPayments || {})[sj.id] || 0));
+      owed += Math.max(0, cost - paid);
+    });
+    occs.filter((o) => o.billing !== "month" && !o.cancelled && o.date <= todayISO && o.remaining > 0.005)
+      .forEach((o) => { owed += o.remaining; });
+    if (owed > 0.005) { months.push({ year: sl.year, month: sl.month, owed }); total += owed; }
+  });
+  return { total, months };
+}
+
 // Total actual cost (non-cancelled) for one month, plus breakdowns — used by statistics.
 function monthCostSummary(year, monthIdx, subjects, monthData, childNameFn, lang) {
   const occ = generateOccurrences(year, monthIdx, subjects, monthData);
@@ -358,6 +610,11 @@ function TutoringLedger() {
   const [showChildren, setShowChildren] = useState(false);
   const [showExtra, setShowExtra] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [carry, setCarry] = useState({ total: 0, months: [] });
+  const [showCarry, setShowCarry] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
   const [activeDay, setActiveDay] = useState(null);
   const [settleTarget, setSettleTarget] = useState(null);
   const [undoTarget, setUndoTarget] = useState(null);
@@ -406,6 +663,7 @@ function TutoringLedger() {
   async function refreshAll() {
     setLoading(true);
     await Promise.all([loadGlobals(), loadMonth()]);
+    setRefreshTick((n) => n + 1);
     setLoading(false);
   }
 
@@ -528,6 +786,14 @@ function TutoringLedger() {
     return { owed, paidSum, cancelledCount, bySubject };
   }, [filteredOccurrences, subjects, monthData, todayISO, monthStarted]);
 
+  useEffect(() => {
+    let off = false;
+    computeCarryover({ subjects, cursor, filterChild, filterCategory, todayISO })
+      .then((r) => { if (!off) setCarry(r); })
+      .catch(() => {});
+    return () => { off = true; };
+  }, [key, subjects, filterChild, filterCategory, refreshTick]);
+
   function toggleField(occ, field) {
     mutateMonth((current) => {
       if (field === "cancelled") {
@@ -543,12 +809,16 @@ function TutoringLedger() {
         const ex = (current.extras || []).find((e) => e.id === occ.key);
         const curPaid = ex ? Number(ex.paidAmount || 0) : 0;
         const newAmount = curPaid > 0.005 ? 0 : occ.cost;
-        return { ...current, extras: (current.extras || []).map((e) => (e.id === occ.key ? { ...e, paidAmount: newAmount } : e)) };
+        const nextC = { ...current, extras: (current.extras || []).map((e) => (e.id === occ.key ? { ...e, paidAmount: newAmount } : e)) };
+        const delta = newAmount - curPaid;
+        return Math.abs(delta) > 0.005 ? addPaymentLog(nextC, { amount: delta, kind: delta > 0 ? "pay" : "undo", name: occ.name, childId: occ.childId || null, childName: childName(occ.childId) || "", lessonDate: occ.date }) : nextC;
       }
       const cur = current.overrides[occ.key] || {};
       const curPaid = Number(cur.paidAmount || 0);
       const newAmount = curPaid > 0.005 ? 0 : occ.cost;
-      return { ...current, overrides: { ...current.overrides, [occ.key]: { ...cur, paidAmount: newAmount } } };
+      const nextC = { ...current, overrides: { ...current.overrides, [occ.key]: { ...cur, paidAmount: newAmount } } };
+      const delta = newAmount - curPaid;
+      return Math.abs(delta) > 0.005 ? addPaymentLog(nextC, { amount: delta, kind: delta > 0 ? "pay" : "undo", name: occ.name, childId: occ.childId || null, childName: childName(occ.childId) || "", lessonDate: occ.date }) : nextC;
     });
   }
   function removeExtra(id) {
@@ -567,9 +837,11 @@ function TutoringLedger() {
       const candidates = occs.filter((o) => o.billing !== "month" && !o.cancelled && o.remaining > 0.005 && o.date <= todayISO && (o.subjectId || `extra_${o.name}`) === settleKey);
       const nextOverrides = { ...current.overrides };
       const nextExtras = (current.extras || []).map((ex) => ({ ...ex }));
+      let applied = 0, firstOcc = null;
       for (const o of candidates) {
         if (remainingToApply <= 0.005) break;
         const apply = Math.min(o.remaining, remainingToApply);
+        applied += apply; if (!firstOcc) firstOcc = o;
         const newPaidAmount = o.paidAmount + apply;
         if (o.isExtra) {
           const idx = nextExtras.findIndex((ex) => ex.id === o.key);
@@ -579,7 +851,8 @@ function TutoringLedger() {
         }
         remainingToApply -= apply;
       }
-      return { ...current, overrides: nextOverrides, extras: nextExtras };
+      const nextC = { ...current, overrides: nextOverrides, extras: nextExtras };
+      return applied > 0.005 && firstOcc ? addPaymentLog(nextC, { amount: applied, kind: "pay", name: firstOcc.name, childId: firstOcc.childId || null, childName: childName(firstOcc.childId) || "" }) : nextC;
     });
   }
   function settleMonthSubject(subjectId, amount) {
@@ -588,18 +861,26 @@ function TutoringLedger() {
       const cap = subj ? Number(subj.cost || 0) : Infinity;
       const cur = Number((current.monthlyPayments || {})[subjectId] || 0);
       const next = Math.min(cap, cur + Math.max(0, Number(amount) || 0));
-      return { ...current, monthlyPayments: { ...(current.monthlyPayments || {}), [subjectId]: next } };
+      const nextC = { ...current, monthlyPayments: { ...(current.monthlyPayments || {}), [subjectId]: next } };
+      const delta = next - cur;
+      return delta > 0.005 ? addPaymentLog(nextC, { amount: delta, kind: "pay", name: subj ? subj.name : "", childId: subj ? (subj.childId || null) : null, childName: subj ? (childName(subj.childId) || "") : "", monthly: true }) : nextC;
     });
   }
   function resetSubjectPayments(target) {
     mutateMonth((current) => {
+      const logUndo = (nextC, total) => (total > 0.005
+        ? addPaymentLog(nextC, { amount: -total, kind: "undo", name: target.name, childId: target.childId || null, childName: childName(target.childId) || "" })
+        : nextC);
       if (target.billing === "month") {
-        return { ...current, monthlyPayments: { ...(current.monthlyPayments || {}), [target.settleKey]: 0 } };
+        const prev = Number((current.monthlyPayments || {})[target.settleKey] || 0);
+        return logUndo({ ...current, monthlyPayments: { ...(current.monthlyPayments || {}), [target.settleKey]: 0 } }, prev);
       }
+      let undoneTotal = 0;
       const occs = generateOccurrences(cursor.getFullYear(), cursor.getMonth(), subjects, current);
       const nextOverrides = { ...current.overrides };
       const nextExtras = (current.extras || []).map((ex) => ({ ...ex }));
       occs.filter((o) => o.billing !== "month" && (o.subjectId || `extra_${o.name}`) === target.settleKey).forEach((o) => {
+        undoneTotal += Number(o.paidAmount || 0);
         if (o.isExtra) {
           const idx = nextExtras.findIndex((ex) => ex.id === o.key);
           if (idx >= 0) nextExtras[idx].paidAmount = 0;
@@ -607,7 +888,7 @@ function TutoringLedger() {
           nextOverrides[o.key] = { ...(nextOverrides[o.key] || {}), paidAmount: 0 };
         }
       });
-      return { ...current, overrides: nextOverrides, extras: nextExtras };
+      return logUndo({ ...current, overrides: nextOverrides, extras: nextExtras }, undoneTotal);
     });
   }
   function confirmSettle(amount) {
@@ -677,6 +958,9 @@ function TutoringLedger() {
             <button onClick={() => setShowStats(true)} style={headerIconBtn} aria-label={t.stats}><BarChart3 size={18} /></button>
             <button onClick={() => setShowChildren(true)} style={headerIconBtn} aria-label={t.titles}><Users size={18} /></button>
             <button onClick={() => setShowSubjects(true)} style={headerIconBtn} aria-label={t.subjectsBtn}><Settings2 size={18} /></button>
+            {typeof window !== "undefined" && window.__account && (
+              <button onClick={() => setShowAccount(true)} style={headerIconBtn} aria-label={t.accountBtn}><UserIcon size={18} /></button>
+            )}
           </div>
         </div>
         <p style={{ fontFamily: "system-ui, sans-serif", fontSize: 13, color: "#6B6455", margin: "0 0 4px" }}>
@@ -712,6 +996,30 @@ function TutoringLedger() {
             <span style={{ fontFamily: "system-ui, sans-serif", fontSize: 13, color: "#6B6455" }}>{t.monthTotalDue}</span>
             <span style={{ fontSize: 30, fontWeight: 700, color: "#B5533C", fontVariantNumeric: "tabular-nums" }}>{fmtEUR(totals.owed, lang)}</span>
           </div>
+          {carry.total > 0.005 && (
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed #E4DECC", fontFamily: "system-ui, sans-serif" }}>
+              <button onClick={() => setShowCarry((v) => !v)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", padding: "2px 0", cursor: "pointer", fontSize: 13, color: "#20293A", fontFamily: "inherit" }}>
+                <span>{t.carryLabel} <span style={{ color: "#9A8F72", fontSize: 11 }}>{showCarry ? "▲" : "▼"}</span></span>
+                <span style={{ fontWeight: 700, color: "#B5533C", fontVariantNumeric: "tabular-nums" }}>{fmtEUR(carry.total, lang)}</span>
+              </button>
+              {showCarry && (
+                <div style={{ margin: "6px 0 4px", padding: "4px 8px", background: "#F7F5EF", borderRadius: 8 }}>
+                  {carry.months.map((m) => (
+                    <button key={`${m.year}-${m.month}`} onClick={() => { setCursor(new Date(m.year, m.month, 1)); setShowCarry(false); }}
+                      style={{ width: "100%", display: "flex", justifyContent: "space-between", background: "none", border: "none", borderBottom: "1px solid #EFEAD9", padding: "7px 0", cursor: "pointer", fontSize: 12.5, color: "#20293A", fontFamily: "inherit" }}>
+                      <span>{MONTHS[lang][m.month]} {m.year}</span>
+                      <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmtEUR(m.owed, lang)}</span>
+                    </button>
+                  ))}
+                  <p style={{ fontSize: 11.5, color: "#9A8F72", margin: "6px 0 2px" }}>{t.carryHint}</p>
+                </div>
+              )}
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 8, paddingTop: 8, borderTop: "1px solid #E4DECC" }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>{t.grandTotalLabel}</span>
+                <span style={{ fontSize: 20, fontWeight: 700, color: "#B5533C", fontVariantNumeric: "tabular-nums" }}>{fmtEUR(totals.owed + carry.total, lang)}</span>
+              </div>
+            </div>
+          )}
           {Object.keys(totals.bySubject).length > 0 && (
             <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed #E4DECC" }}>
               {Object.values(totals.bySubject).map((b) => {
@@ -750,20 +1058,33 @@ function TutoringLedger() {
           )}
         </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <button onClick={() => setShowExtra(true)} style={{ ...addBtn, width: "100%", background: "#fff", color: "#8A7A57", border: "1px solid #D8C9A0" }}>
+        <div style={{ marginBottom: 14, display: "flex", gap: 8 }}>
+          <button onClick={() => setShowExtra(true)} style={{ ...addBtn, flex: 1, background: "#fff", color: "#8A7A57", border: "1px solid #D8C9A0" }}>
             <Plus size={15} /> {t.extraActivity}
+          </button>
+          <button onClick={() => setShowHistory(true)} style={{ ...addBtn, flex: 1, background: "#fff", color: "#8A7A57", border: "1px solid #D8C9A0" }}>
+            {t.historyBtn}
           </button>
         </div>
 
         {loading ? (
           <p style={{ fontFamily: "system-ui, sans-serif", fontSize: 13, color: "#6B6455" }}>{t.loading}</p>
-        ) : subjects.length === 0 ? (
-          <div style={emptyState}>
-            {t.emptyStatePre} <Settings2 size={13} style={{ verticalAlign: -2 }} /> {t.emptyStatePost}
-          </div>
         ) : (
           <>
+            {subjects.length === 0 && (
+              <div style={welcomeCard}>
+                <h2 style={{ margin: "0 0 6px", fontSize: 17, fontWeight: 700, color: "#20293A" }}>{t.welcomeTitle}</h2>
+                <p style={{ margin: "0 0 12px", fontFamily: "system-ui, sans-serif", fontSize: 13.5, color: "#6B6455", lineHeight: 1.55 }}>{t.welcomeIntro}</p>
+                {[t.welcomeStep1, t.welcomeStep2].map((txt, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8, fontFamily: "system-ui, sans-serif", fontSize: 13.5, color: "#20293A" }}>
+                    <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", background: "#20293A", color: "#F7F5EF", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                    <span style={{ paddingTop: 2 }}>{txt}</span>
+                  </div>
+                ))}
+                <p style={{ margin: "10px 0 14px", fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "#9A8F72", lineHeight: 1.55 }}>{t.welcomeAfter}</p>
+                <button onClick={() => setShowSubjects(true)} style={{ ...primaryBtn, marginTop: 0 }}>{t.welcomeStart}</button>
+              </div>
+            )}
             <div style={{ background: "#FFFFFF", border: "1px solid #E4DECC", borderRadius: 10, padding: 8, marginBottom: 8 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
                 {WEEKDAYS_GRID[lang].map((w) => (
@@ -809,9 +1130,11 @@ function TutoringLedger() {
                 ))}
               </div>
             )}
-            <p style={{ fontFamily: "system-ui, sans-serif", fontSize: 11.5, color: "#9A8F72", padding: "0 4px 16px" }}>
-              {t.tapHint}
-            </p>
+            {subjects.length > 0 && (
+              <p style={{ fontFamily: "system-ui, sans-serif", fontSize: 11.5, color: "#9A8F72", padding: "0 4px 16px" }}>
+                {t.tapHint}
+              </p>
+            )}
           </>
         )}
 
@@ -830,6 +1153,12 @@ function TutoringLedger() {
       {showExtra && (
         <ExtraLessonModal lang={lang} subjects={subjects} children={children} onClose={() => setShowExtra(false)} onSave={addExtra} />
       )}
+      {showAccount && (
+        <AccountModal lang={lang} onClose={() => setShowAccount(false)} />
+      )}
+      {showHistory && (
+        <PaymentHistoryModal lang={lang} initialYear={cursor.getFullYear()} onClose={() => setShowHistory(false)} />
+      )}
       {showStats && (
         <StatsModal lang={lang} subjects={subjects} childName={childName} initialYear={cursor.getFullYear()} onClose={() => setShowStats(false)} />
       )}
@@ -846,6 +1175,7 @@ function TutoringLedger() {
 const headerIconBtn = { background: "none", border: "none", cursor: "pointer", color: "#8A7A57", display: "flex", alignItems: "center", padding: 4 };
 const monthNavStyle = { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#20293A", color: "#F7F5EF", borderRadius: 10, padding: "10px 14px", marginBottom: 14 };
 const totalsCard = { background: "#FFFFFF", border: "1px solid #E4DECC", borderRadius: 10, padding: "16px 18px", marginBottom: 18 };
+const welcomeCard = { background: "#FFFFFF", border: "1px solid #D8C9A0", borderRadius: 12, padding: "18px 18px 18px", marginBottom: 14, boxShadow: "0 1px 0 #EFEAD9" };
 const emptyState = { textAlign: "center", padding: "36px 16px", color: "#9A8F72", fontFamily: "system-ui, sans-serif", fontSize: 13.5, lineHeight: 1.6 };
 const navBtn = { background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 6, color: "#F7F5EF", padding: 6, cursor: "pointer", display: "flex" };
 const addBtn = { display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "system-ui, sans-serif", fontSize: 13.5, fontWeight: 600, padding: "10px 0", borderRadius: 8, cursor: "pointer" };
@@ -913,6 +1243,204 @@ function DayDetailModal({ lang, date, occs, subjects, childName, onClose, onTogg
   );
 }
 
+function CategoryPicker({ lang, value, onChange }) {
+  const t = STRINGS[lang];
+  return (
+    <>
+      <label style={fieldLabel}>{t.categoryLabel}</label>
+      <p style={{ fontSize: 11.5, color: "#9A8F72", margin: "0 0 7px" }}>{t.categoryHelp}</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {CATEGORIES.map((c) => (
+          <button key={c} onClick={() => onChange(c)} style={{ ...toggleChip, flex: "none", padding: "7px 14px", ...(value === c ? toggleChipActive : {}) }}>{catLabel(lang, c)}</button>
+        ))}
+      </div>
+      <p style={{ fontSize: 12, color: "#6B6455", background: "#F1ECDD", borderRadius: 6, padding: "7px 10px", margin: "8px 0 0", lineHeight: 1.5 }}>{catHint(lang, value)}</p>
+    </>
+  );
+}
+
+function PaymentHistoryModal({ lang, initialYear, onClose }) {
+  const t = STRINGS[lang];
+  const [year, setYear] = useState(initialYear);
+  const [rows, setRows] = useState(null);
+
+  useEffect(() => {
+    let off = false;
+    setRows(null);
+    (async () => {
+      const results = await Promise.all(
+        Array.from({ length: 12 }, (_, m) => window.storage.get(`month:${monthKey2(year, m)}`, true).catch(() => null))
+      );
+      if (off) return;
+      const all = [];
+      results.forEach((res, m) => {
+        let data = null;
+        try { data = res && res.value ? JSON.parse(res.value) : null; } catch (e) {}
+        ((data && data.payments) || []).forEach((p) => all.push({ ...p, monthKey: monthKey2(year, m) }));
+      });
+      all.sort((a, b) => b.ts - a.ts);
+      setRows(all);
+    })();
+    return () => { off = true; };
+  }, [year]);
+
+  const net = rows ? rows.reduce((a, p) => a + Number(p.amount || 0), 0) : 0;
+  function fmtTs(ts) {
+    const d = new Date(ts);
+    return d.toLocaleDateString(t.dateLocale, { day: "2-digit", month: "2-digit", year: "numeric" }) + " " + d.toLocaleTimeString(t.dateLocale, { hour: "2-digit", minute: "2-digit" });
+  }
+  function exportCsv() {
+    if (!rows || rows.length === 0) return;
+    const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+    const head = [t.csvDate, t.csvChild, t.csvActivity, t.csvAmount, t.csvType, t.csvForMonth, t.csvLessonDate];
+    const lines = [head.map(esc).join(";")];
+    rows.slice().reverse().forEach((p) => {
+      lines.push([
+        fmtTs(p.ts), p.childName || "", p.name || "",
+        Number(p.amount || 0).toFixed(2).replace(".", ","),
+        p.kind === "undo" ? t.csvUndo : t.csvPay, p.monthKey, p.lessonDate || "",
+      ].map(esc).join(";"));
+    });
+    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `altis-payments-${year}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  return (
+    <div style={overlay()}>
+      <div onClick={(e) => e.stopPropagation()} style={sheet()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#20293A" }}>{t.historyHeader}</h2>
+          <button onClick={onClose} style={iconBtn}><X size={18} /></button>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#20293A", color: "#F7F5EF", borderRadius: 10, padding: "8px 12px", margin: "10px 0" }}>
+          <button onClick={() => setYear((y) => y - 1)} style={navBtn}><ChevronLeft size={16} /></button>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>{year}</span>
+          <button onClick={() => setYear((y) => y + 1)} style={navBtn}><ChevronRight size={16} /></button>
+        </div>
+        {rows === null ? (
+          <p style={{ fontSize: 13, color: "#6B6455" }}>{t.loading}</p>
+        ) : rows.length === 0 ? (
+          <p style={{ fontSize: 13, color: "#9A8F72", margin: "8px 0 4px" }}>{t.historyEmpty}</p>
+        ) : (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+              <span style={{ fontSize: 12.5, color: "#6B6455" }}>{t.netPaid}</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "#5C7A5F" }}>{fmtEUR(net, lang)}</span>
+            </div>
+            {rows.map((p) => (
+              <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 2px", borderBottom: "1px solid #E9E3D2" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600 }}>
+                    {p.name}{p.childName ? <span style={{ color: "#9A8F72", fontWeight: 400 }}> · {p.childName}</span> : null}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#9A8F72" }}>
+                    {fmtTs(p.ts)}{p.kind === "undo" ? ` · ${t.reversalTag}` : ""}
+                  </div>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: p.kind === "undo" ? "#B5533C" : "#5C7A5F" }}>
+                  {Number(p.amount) > 0 ? "+" : "\u2212"}{fmtEUR(Math.abs(Number(p.amount)), lang)}
+                </div>
+              </div>
+            ))}
+            <button onClick={exportCsv} style={{ ...primaryBtn, marginTop: 14 }}>{t.exportCsv}</button>
+          </>
+        )}
+        <p style={{ fontSize: 11.5, color: "#9A8F72", margin: "10px 0 0" }}>{t.historyNote}</p>
+      </div>
+    </div>
+  );
+}
+
+function AccountModal({ lang, onClose }) {
+  const t = STRINGS[lang];
+  const acc = (typeof window !== "undefined" && window.__account) || {};
+  const [copied, setCopied] = useState(false);
+  const [delStep, setDelStep] = useState(0); // 0 = hidden, 1 = confirm form
+  const [delShared, setDelShared] = useState(false);
+  const [delPw, setDelPw] = useState("");
+  const [delBusy, setDelBusy] = useState(false);
+  const [delErr, setDelErr] = useState("");
+
+  async function openDelete() {
+    setDelErr("");
+    try {
+      const snap = await db.collection("app_families").doc(acc.familyId).get();
+      const members = (snap.exists && snap.data().members) || [];
+      setDelShared(members.length > 1);
+    } catch (e) { setDelShared(false); }
+    setDelStep(1);
+  }
+  async function doDelete() {
+    if (!delPw) { setDelErr(t.deletePasswordLabel); return; }
+    setDelErr(""); setDelBusy(true);
+    try {
+      const u = firebase.auth().currentUser;
+      const cred = firebase.auth.EmailAuthProvider.credential(u.email, delPw);
+      await u.reauthenticateWithCredential(cred);
+      const famRef = db.collection("app_families").doc(acc.familyId);
+      const famSnap = await famRef.get();
+      const members = (famSnap.exists && famSnap.data().members) || [];
+      const others = members.filter((m) => m !== u.uid);
+      if (others.length === 0) {
+        const dataSnap = await famRef.collection("data").get();
+        const docs = dataSnap.docs;
+        for (let i = 0; i < docs.length; i += 400) {
+          const batch = db.batch();
+          docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+          await batch.commit();
+        }
+        await famRef.delete();
+      } else {
+        await famRef.update({ members: firebase.firestore.FieldValue.arrayRemove(u.uid) });
+      }
+      await db.collection("app_users").doc(u.uid).delete();
+      await u.delete();
+    } catch (e) {
+      console.error(e);
+      setDelErr(e && (e.code === "auth/wrong-password" || e.code === "auth/invalid-credential") ? t.deleteWrongPw : t.deleteFailed);
+      setDelBusy(false);
+    }
+  }
+  function copy() {
+    try { navigator.clipboard.writeText(acc.familyId || ""); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch (e) {}
+  }
+  return (
+    <div style={overlay()}>
+      <div onClick={(e) => e.stopPropagation()} style={sheet()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#20293A" }}>{t.accountTitle}</h2>
+          <button onClick={onClose} style={iconBtn}><X size={18} /></button>
+        </div>
+        <p style={{ fontSize: 12, color: "#6B6455", margin: "0 0 2px" }}>{t.signedInAs}</p>
+        <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 16px", wordBreak: "break-all" }}>{acc.email}</p>
+        <p style={{ fontSize: 12, color: "#6B6455", margin: "0 0 6px", fontWeight: 600 }}>{t.familyCodeLabel}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <div style={{ flex: 1, background: "#F1ECDD", borderRadius: 8, padding: "12px 0", textAlign: "center", fontSize: 22, fontWeight: 700, letterSpacing: 3 }}>{acc.familyId}</div>
+          <button onClick={copy} style={{ ...toggleChip, flex: "none", padding: "12px 14px" }}>{copied ? t.copiedCode : t.copyCode}</button>
+        </div>
+        <p style={{ fontSize: 12, color: "#9A8F72", margin: "0 0 14px", lineHeight: 1.5 }}>{t.familyCodeHelp}</p>
+        <p style={{ fontSize: 12, color: "#5C7A5F", margin: "0 0 18px" }}>{t.privacyNote}</p>
+        <button onClick={() => acc.signOut && acc.signOut()} style={{ ...primaryBtn, background: "#fff", color: "#20293A", border: "1px solid #DDD6C8" }}>{t.signOut}</button>
+        {delStep === 0 ? (
+          <button onClick={openDelete} style={{ ...primaryBtn, background: "none", color: "#B5533C", border: "none", fontSize: 13, marginTop: 14 }}>{t.deleteAccount}</button>
+        ) : (
+          <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid #E4DECC" }}>
+            <p style={{ fontSize: 12.5, color: "#B5533C", margin: "0 0 10px", lineHeight: 1.5 }}>{delShared ? t.deleteWarnShared : t.deleteWarnSole}</p>
+            <label style={{ ...fieldLabel, marginTop: 0 }}>{t.deletePasswordLabel}</label>
+            <input type="password" value={delPw} onChange={(e) => setDelPw(e.target.value)} style={fieldInput} autoComplete="current-password" />
+            {delErr && <p style={{ fontSize: 12.5, color: "#B5533C", margin: "8px 0 0" }}>{delErr}</p>}
+            <button onClick={doDelete} disabled={delBusy} style={{ ...primaryBtn, background: "#B5533C", opacity: delBusy ? 0.6 : 1 }}>{delBusy ? t.deleteBusy : t.deleteConfirmBtn}</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ChildrenModal({ lang, children, onClose, onAdd, onDelete }) {
   const t = STRINGS[lang];
   const [name, setName] = useState("");
@@ -945,6 +1473,26 @@ function SubjectsModal({ lang, subjects, children, onClose, onSave, onDelete, on
   const t = STRINGS[lang];
   const [editing, setEditing] = useState(null);
   const [newTitle, setNewTitle] = useState("");
+  const [exportMsg, setExportMsg] = useState("");
+  const [exportBusy, setExportBusy] = useState(false);
+
+  async function exportReminders() {
+    setExportBusy(true); setExportMsg("");
+    try {
+      const { text, count } = await buildRemindersIcs({ subjects, children, lang, days: 56 });
+      if (!text || count === 0) { setExportMsg(t.remindersExportNone); }
+      else {
+        const blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "altis-reminders.ics";
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        setExportMsg(t.remindersExportDone(count));
+      }
+    } catch (e) { console.error(e); setExportMsg(t.saveFail); }
+    setExportBusy(false);
+  }
 
   if (editing) {
     return <SubjectForm lang={lang} subject={editing} children={children} onCancel={() => setEditing(null)} onSave={(s) => { onSave(s); setEditing(null); }} />;
@@ -966,6 +1514,7 @@ function SubjectsModal({ lang, subjects, children, onClose, onSave, onDelete, on
             <div style={{ fontSize: 12, color: "#9A8F72", marginTop: 2 }}>
               {catLabel(lang, s.category || CATEGORIES[0])} · {(s.slots || []).map((sl) => `${WEEKDAYS[lang][sl.weekday].slice(0, 3)} ${sl.start}-${sl.end}`).join(" · ")}
               {"  ·  "}{fmtEUR(s.cost, lang)}{(s.billing || "lesson") === "month" ? t.perMonth : t.perLesson}
+              {Number(s.reminderMinutes) > 0 && ` · ${t.reminderWord}: ${reminderLabel(lang, Number(s.reminderMinutes))}`}
               {(s.startDate || s.endDate) && (
                 <><br />{s.startDate ? `${t.fromDate} ${fmtDateShort(s.startDate, lang)}` : t.noStart}{" · "}{s.endDate ? `${t.untilDate} ${fmtDateShort(s.endDate, lang)}` : t.noEnd}</>
               )}
@@ -1034,6 +1583,16 @@ function SubjectsModal({ lang, subjects, children, onClose, onSave, onDelete, on
             ) : ungrouped.map(renderSubjectRow)}
           </div>
         )}
+
+        {subjects.some((sj) => Number(sj.reminderMinutes) > 0) && (
+          <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid #E4DECC" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#20293A", marginBottom: 4 }}>{t.remindersExportTitle}</div>
+            <p style={{ fontSize: 12, color: "#6B6455", margin: "0 0 6px", lineHeight: 1.5 }}>{t.remindersExportHelp}</p>
+            <p style={{ fontSize: 11.5, color: "#9A8F72", margin: "0 0 10px", lineHeight: 1.5 }}>{t.remindersExportNote}</p>
+            <button onClick={exportReminders} disabled={exportBusy} style={{ ...primaryBtn, marginTop: 0, opacity: exportBusy ? 0.6 : 1 }}>{t.remindersExportBtn}</button>
+            {exportMsg && <p style={{ fontSize: 12.5, color: "#5C7A5F", margin: "8px 0 0" }}>{exportMsg}</p>}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1049,6 +1608,7 @@ function SubjectForm({ lang, subject, children, onCancel, onSave }) {
   const [startDate, setStartDate] = useState(subject.startDate || "");
   const [endDate, setEndDate] = useState(subject.endDate || "");
   const [slots, setSlots] = useState(subject.slots && subject.slots.length ? subject.slots : []);
+  const [reminder, setReminder] = useState(Number(subject.reminderMinutes) || 0);
   const [newWeekday, setNewWeekday] = useState(1);
   const [newStart, setNewStart] = useState("17:00");
   const [newEnd, setNewEnd] = useState("18:00");
@@ -1067,12 +1627,7 @@ function SubjectForm({ lang, subject, children, onCancel, onSave }) {
         <label style={fieldLabel}>{t.nameLabel}</label>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={fieldInput} placeholder={t.namePlaceholder} />
 
-        <label style={fieldLabel}>{t.categoryLabel}</label>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {CATEGORIES.map((c) => (
-            <button key={c} onClick={() => setCategory(c)} style={{ ...toggleChip, flex: "none", padding: "7px 14px", ...(category === c ? toggleChipActive : {}) }}>{catLabel(lang, c)}</button>
-          ))}
-        </div>
+        <CategoryPicker lang={lang} value={category} onChange={setCategory} />
 
         {children.length > 0 && (
           <>
@@ -1089,6 +1644,7 @@ function SubjectForm({ lang, subject, children, onCancel, onSave }) {
           <button onClick={() => setBilling("lesson")} style={{ ...toggleChip, ...(billing === "lesson" ? toggleChipActive : {}) }}>{t.perLessonBtn}</button>
           <button onClick={() => setBilling("month")} style={{ ...toggleChip, ...(billing === "month" ? toggleChipActive : {}) }}>{t.flatMonthlyBtn}</button>
         </div>
+        <p style={{ fontSize: 11.5, color: "#9A8F72", margin: "5px 0 0", lineHeight: 1.5 }}>{t.billingHint}</p>
 
         <label style={fieldLabel}>{billing === "month" ? t.costPerMonth : t.costPerLesson}</label>
         <input type="number" step="0.5" min="0" value={cost} onChange={(e) => setCost(e.target.value)} style={fieldInput} />
@@ -1107,6 +1663,7 @@ function SubjectForm({ lang, subject, children, onCancel, onSave }) {
         <p style={{ fontSize: 11.5, color: "#9A8F72", margin: "5px 0 0" }}>{t.validityHint}</p>
 
         <label style={{ ...fieldLabel }}>{t.fixedSlots}</label>
+        <p style={{ fontSize: 11.5, color: "#9A8F72", margin: "0 0 7px", lineHeight: 1.5 }}>{t.slotsHint}</p>
         {slots.length > 0 && (
           <div style={{ marginBottom: 8 }}>
             {slots.map((sl) => (
@@ -1135,8 +1692,14 @@ function SubjectForm({ lang, subject, children, onCancel, onSave }) {
           <button onClick={addSlot} style={{ ...iconBtn, background: "#20293A", color: "#F7F5EF", borderRadius: 8, padding: "9px 10px" }} title={t.addTimeSlot}><Plus size={16} /></button>
         </div>
 
+        <label style={fieldLabel}>{t.reminderLabel}</label>
+        <select value={reminder} onChange={(e) => setReminder(Number(e.target.value))} style={fieldInput}>
+          {REMINDER_OPTIONS.map((m) => <option key={m} value={m}>{reminderLabel(lang, m)}</option>)}
+        </select>
+        <p style={{ fontSize: 11.5, color: "#9A8F72", margin: "5px 0 0", lineHeight: 1.5 }}>{t.reminderHelp}</p>
+
         <button
-          onClick={() => name.trim() && onSave({ id: subject.id, name: name.trim(), cost: Number(cost), billing, category, childId: childId || null, startDate: startDate || "", endDate: endDate || "", slots })}
+          onClick={() => name.trim() && onSave({ id: subject.id, name: name.trim(), cost: Number(cost), billing, category, childId: childId || null, startDate: startDate || "", endDate: endDate || "", slots, reminderMinutes: reminder, ...(subject.createdAt ? { createdAt: subject.createdAt } : (!subject.name ? { createdAt: Date.now() } : {})) })}
           style={primaryBtn}
         >
           {t.save}
@@ -1186,12 +1749,7 @@ function ExtraLessonModal({ lang, subjects, children, onClose, onSave }) {
           <>
             <label style={fieldLabel}>{t.nameLabel}</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={fieldInput} placeholder={t.extraNamePlaceholder} />
-            <label style={fieldLabel}>{t.categoryLabel}</label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {CATEGORIES.map((c) => (
-                <button key={c} onClick={() => setCategory(c)} style={{ ...toggleChip, flex: "none", padding: "7px 14px", ...(category === c ? toggleChipActive : {}) }}>{catLabel(lang, c)}</button>
-              ))}
-            </div>
+            <CategoryPicker lang={lang} value={category} onChange={setCategory} />
           </>
         )}
 
@@ -1419,32 +1977,364 @@ function UndoConfirmModal({ lang, target, onCancel, onConfirm }) {
 }
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
-function AuthGate() {
-  const [ready, setReady] = React.useState(false);
-  const [failed, setFailed] = React.useState(false);
+// ---- shared styles for the login / family screens (kept visually consistent with the app) ----
+const authWrap = { background: "#F7F5EF", minHeight: "100vh", fontFamily: "'Iowan Old Style', 'Georgia', serif", color: "#20293A", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" };
+const authCard = { background: "#FFFFFF", border: "1px solid #E4DECC", borderRadius: 12, padding: "28px 24px", width: "100%", maxWidth: 380, fontFamily: "system-ui, sans-serif" };
+const authTitle = { fontFamily: "'Iowan Old Style', 'Georgia', serif", fontSize: 24, fontWeight: 600, margin: "0 0 4px", textAlign: "center" };
+const authSubtitle = { fontSize: 13, color: "#6B6455", textAlign: "center", margin: "0 0 22px" };
+const authInput = { width: "100%", boxSizing: "border-box", border: "1px solid #DDD6C8", borderRadius: 8, padding: "11px 12px", fontSize: 14, fontFamily: "system-ui, sans-serif", background: "#fff", color: "#20293A", marginBottom: 10 };
+const authBtn = { width: "100%", background: "#20293A", color: "#F7F5EF", border: "none", borderRadius: 8, padding: "12px 0", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "system-ui, sans-serif" };
+const authBtnSecondary = { ...authBtn, background: "#fff", color: "#20293A", border: "1px solid #DDD6C8" };
+const authLink = { background: "none", border: "none", color: "#8A7A57", fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "system-ui, sans-serif" };
+const authError = { fontSize: 13, color: "#B5533C", margin: "0 0 12px", fontFamily: "system-ui, sans-serif" };
 
-  React.useEffect(() => {
-    const unsub = firebase.auth().onAuthStateChanged((user) => {
-      if (user) setReady(true);
-    });
+function friendlyAuthError(code) {
+  const map = {
+    "auth/invalid-email": "Το email δεν φαίνεται έγκυρο.",
+    "auth/email-already-in-use": "Υπάρχει ήδη λογαριασμός με αυτό το email.",
+    "auth/weak-password": "Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες.",
+    "auth/wrong-password": "Λάθος κωδικός.",
+    "auth/user-not-found": "Δεν βρέθηκε λογαριασμός με αυτό το email.",
+    "auth/invalid-credential": "Λάθος email ή κωδικός.",
+    "auth/too-many-requests": "Πολλές αποτυχημένες προσπάθειες. Δοκίμασε ξανά σε λίγο.",
+  };
+  return map[code] || "Κάτι πήγε στραβά. Δοκίμασε ξανά.";
+}
+
+// Generates a short, human-friendly family invite code (avoids visually-confusing characters).
+function generateFamilyCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+function LoginScreen() {
+  const [mode, setMode] = useState("login"); // "login" | "register" | "forgot"
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
+  async function submit() {
+    setError("");
+    if (!email.trim() || !password) { setError("Συμπλήρωσε email και κωδικό."); return; }
+    setBusy(true);
+    try {
+      if (mode === "login") {
+        await firebase.auth().signInWithEmailAndPassword(email.trim(), password);
+      } else {
+        await firebase.auth().createUserWithEmailAndPassword(email.trim(), password);
+      }
+    } catch (e) {
+      setError(friendlyAuthError(e.code));
+    }
+    setBusy(false);
+  }
+
+  async function submitReset() {
+    setError("");
+    if (!email.trim()) { setError("Γράψε πρώτα το email σου."); return; }
+    setBusy(true);
+    try {
+      await firebase.auth().sendPasswordResetEmail(email.trim());
+      setResetSent(true);
+    } catch (e) {
+      setError(friendlyAuthError(e.code));
+    }
+    setBusy(false);
+  }
+
+  if (mode === "forgot") {
+    return (
+      <div style={authWrap}>
+        <div style={authCard}>
+          <h1 style={authTitle}>Επαναφορά κωδικού</h1>
+          {resetSent ? (
+            <>
+              <p style={authSubtitle}>Αν υπάρχει λογαριασμός με αυτό το email, σου στείλαμε ένα μήνυμα με σύνδεσμο για να φτιάξεις νέο κωδικό. Έλεγξε και τα Ανεπιθύμητα/Spam.</p>
+              <button style={authBtn} onClick={() => { setMode("login"); setResetSent(false); setError(""); }}>Πίσω στη σύνδεση</button>
+            </>
+          ) : (
+            <>
+              <p style={authSubtitle}>Γράψε το email του λογαριασμού σου και θα σου στείλουμε σύνδεσμο για νέο κωδικό.</p>
+              {error && <p style={authError}>{error}</p>}
+              <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={authInput} autoCapitalize="none" onKeyDown={(e) => e.key === "Enter" && submitReset()} />
+              <button onClick={submitReset} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : "Αποστολή συνδέσμου"}</button>
+              <div style={{ textAlign: "center" }}>
+                <button style={authLink} onClick={() => { setMode("login"); setError(""); }}>Πίσω</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={authWrap}>
+      <div style={authCard}>
+        <h1 style={authTitle}>Altis</h1>
+        <p style={authSubtitle}>{mode === "login" ? "Σύνδεση στον λογαριασμό σου" : "Δημιουργία λογαριασμού"}</p>
+        {error && <p style={authError}>{error}</p>}
+        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={authInput} autoCapitalize="none" />
+        <input type="password" placeholder="Κωδικός" value={password} onChange={(e) => setPassword(e.target.value)} style={authInput} onKeyDown={(e) => e.key === "Enter" && submit()} />
+        <button onClick={submit} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 14 }}>
+          {busy ? "…" : mode === "login" ? "Σύνδεση" : "Εγγραφή"}
+        </button>
+        <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 8 }}>
+          {mode === "login" ? (
+            <>
+              <button style={authLink} onClick={() => { setMode("register"); setError(""); }}>Δεν έχεις λογαριασμό; Κάνε εγγραφή</button>
+              <button style={authLink} onClick={() => { setMode("forgot"); setError(""); }}>Ξέχασα τον κωδικό μου</button>
+            </>
+          ) : (
+            <button style={authLink} onClick={() => { setMode("login"); setError(""); }}>Έχεις ήδη λογαριασμό; Συνδέσου</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FamilySetupScreen({ user, onResolved }) {
+  const [choice, setChoice] = useState(null); // null | "create" | "join"
+  const [joinCode, setJoinCode] = useState("");
+  const [createdCode, setCreatedCode] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function createFamily() {
+    setBusy(true);
+    setError("");
+    try {
+      let code = generateFamilyCode();
+      // Extremely unlikely to collide, but check anyway before writing.
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const existing = await db.collection("app_families").doc(code).get();
+        if (!existing.exists) break;
+        code = generateFamilyCode();
+      }
+      await db.collection("app_families").doc(code).set({
+        createdBy: user.uid, createdAt: Date.now(), members: [user.uid],
+      });
+      await db.collection("app_users").doc(user.uid).set({ email: user.email, familyId: code }, { merge: true });
+      setCreatedCode(code);
+    } catch (e) {
+      setError("Η δημιουργία απέτυχε. Δοκίμασε ξανά.");
+    }
+    setBusy(false);
+  }
+
+  async function joinFamily() {
+    const code = joinCode.trim().toUpperCase();
+    if (!code) { setError("Γράψε τον κωδικό πρόσκλησης."); return; }
+    setBusy(true);
+    setError("");
+    try {
+      const ref = db.collection("app_families").doc(code);
+      const snap = await ref.get();
+      if (!snap.exists) { setError("Δεν βρέθηκε οικογένεια με αυτόν τον κωδικό."); setBusy(false); return; }
+      await ref.update({ members: firebase.firestore.FieldValue.arrayUnion(user.uid) });
+      await db.collection("app_users").doc(user.uid).set({ email: user.email, familyId: code }, { merge: true });
+      onResolved(code);
+    } catch (e) {
+      setError("Κάτι πήγε στραβά. Δοκίμασε ξανά.");
+    }
+    setBusy(false);
+  }
+
+  if (createdCode) {
+    return (
+      <div style={authWrap}>
+        <div style={authCard}>
+          <h1 style={authTitle}>Η οικογένειά σου είναι έτοιμη</h1>
+          <p style={authSubtitle}>Μοιράσου αυτόν τον κωδικό με τον/την σύζυγο, ώστε να μπείτε στα ίδια δεδομένα</p>
+          <div style={{ background: "#F1ECDD", borderRadius: 10, padding: "18px 0", textAlign: "center", fontSize: 30, fontWeight: 700, letterSpacing: 4, color: "#20293A", marginBottom: 18, fontFamily: "system-ui, sans-serif" }}>
+            {createdCode}
+          </div>
+          <button onClick={() => onResolved(createdCode)} style={authBtn}>Συνέχεια στην εφαρμογή</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (choice === "create") {
+    return (
+      <div style={authWrap}>
+        <div style={authCard}>
+          <h1 style={authTitle}>Νέα οικογένεια</h1>
+          <p style={authSubtitle}>Θα φτιάξουμε έναν κωδικό πρόσκλησης που θα δώσεις μετά στον/στη σύζυγο.</p>
+          {error && <p style={authError}>{error}</p>}
+          <button onClick={createFamily} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : "Δημιουργία οικογένειας"}</button>
+          <button onClick={() => setChoice(null)} style={authBtnSecondary}>Πίσω</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (choice === "join") {
+    return (
+      <div style={authWrap}>
+        <div style={authCard}>
+          <h1 style={authTitle}>Συμμετοχή σε οικογένεια</h1>
+          <p style={authSubtitle}>Γράψε τον κωδικό πρόσκλησης που σου έδωσε ο/η σύζυγος.</p>
+          {error && <p style={authError}>{error}</p>}
+          <input type="text" placeholder="π.χ. AB3CD9" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} style={{ ...authInput, textAlign: "center", fontSize: 20, letterSpacing: 3, textTransform: "uppercase" }} onKeyDown={(e) => e.key === "Enter" && joinFamily()} />
+          <button onClick={joinFamily} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : "Συμμετοχή"}</button>
+          <button onClick={() => setChoice(null)} style={authBtnSecondary}>Πίσω</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={authWrap}>
+      <div style={authCard}>
+        <h1 style={authTitle}>Καλωσόρισες!</h1>
+        <p style={authSubtitle}>Είσαι ο πρώτος γονέας που φτιάχνει την οικογένεια, ή έχεις ήδη κωδικό πρόσκλησης;</p>
+        <button onClick={() => setChoice("create")} style={{ ...authBtn, marginBottom: 10 }}>Δημιουργία νέας οικογένειας</button>
+        <button onClick={() => setChoice("join")} style={authBtnSecondary}>Έχω κωδικό πρόσκλησης</button>
+      </div>
+    </div>
+  );
+}
+
+function AppGate() {
+  const [user, setUser] = useState(undefined); // undefined = loading, null = signed out
+  const [familyId, setFamilyId] = useState(undefined); // undefined = loading, null = not set yet
+  const [failed, setFailed] = useState(false);
+
+  // Demo mode: unchanged behaviour — anonymous auth, isolated demo collection, no family logic.
+  useEffect(() => {
+    if (!IS_DEMO) return;
+    const unsub = firebase.auth().onAuthStateChanged((u) => { if (u) setUser(u); });
     firebase.auth().signInAnonymously().catch(() => setFailed(true));
     return unsub;
   }, []);
 
+  // Real mode: email/password auth, then resolve (or set up) the user's family.
+  useEffect(() => {
+    if (IS_DEMO) return;
+    const unsub = firebase.auth().onAuthStateChanged(async (u) => {
+      setUser(u || null);
+      if (u) {
+        try {
+          const snap = await db.collection("app_users").doc(u.uid).get();
+          setFamilyId(snap.exists && snap.data().familyId ? snap.data().familyId : null);
+        } catch (e) {
+          setFailed(true);
+        }
+      } else {
+        setFamilyId(null);
+      }
+    });
+    return unsub;
+  }, []);
+
   if (failed) {
-    return (
-      <div style={{ padding: 24, fontFamily: "system-ui, sans-serif", color: "#B5533C" }}>
-        Η σύνδεση με τη βάση απέτυχε. Έλεγξε ότι το «Anonymous» sign-in είναι ενεργοποιημένο στο Firebase και ότι έχεις σύνδεση internet.
-      </div>
-    );
+    return <div style={{ padding: 24, fontFamily: "system-ui, sans-serif", color: "#B5533C" }}>Η σύνδεση με τη βάση απέτυχε. Έλεγξε τη σύνδεσή σου στο internet και δοκίμασε ξανά.</div>;
   }
-  if (!ready) {
-    return <div style={{ padding: 24, fontFamily: "system-ui, sans-serif", color: "#6B6455" }}>Σύνδεση…</div>;
+
+  if (IS_DEMO) {
+    if (!user) return <div style={{ padding: 24, fontFamily: "system-ui, sans-serif", color: "#6B6455" }}>Σύνδεση…</div>;
+    window.__familyCollectionRef = null; // demo path uses DEMO_COLLECTION directly, not family-scoped
+    return <TutoringLedger />;
   }
-  return <TutoringLedger />;
+
+  if (user === undefined) return <div style={{ padding: 24, fontFamily: "system-ui, sans-serif", color: "#6B6455" }}>Φόρτωση…</div>;
+  if (!user) return <LoginScreen />;
+  if (familyId === undefined) return <div style={{ padding: 24, fontFamily: "system-ui, sans-serif", color: "#6B6455" }}>Φόρτωση…</div>;
+  if (!familyId) return <FamilySetupScreen user={user} onResolved={setFamilyId} />;
+
+  window.__familyCollectionRef = db.collection("app_families").doc(familyId).collection("data");
+  window.__account = { email: user.email || "", familyId, signOut: () => firebase.auth().signOut() };
+  return <AppWithTools user={user} />;
 }
 
-root.render(<AuthGate />);
+// Wraps the app. Adds the one-time "import old data" tool, only when the page is opened with ?import=1.
+// Access to the old data is enforced by Firestore rules (verified owner email only), not by this screen.
+function AppWithTools({ user }) {
+  const wantsImport = urlParams.get("import") === "1";
+  const [showImport, setShowImport] = useState(wantsImport);
+  const [reloadKey, setReloadKey] = useState(0);
+  return (
+    <>
+      <TutoringLedger key={reloadKey} />
+      {showImport && <ImportOldData user={user} onClose={() => setShowImport(false)} onImported={() => setReloadKey((k) => k + 1)} />}
+    </>
+  );
+}
+
+function ImportOldData({ user, onClose, onImported }) {
+  const [verified, setVerified] = useState(!!user.emailVerified);
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function sendVerify() {
+    setBusy(true); setMsg("");
+    try { await firebase.auth().currentUser.sendEmailVerification(); setSent(true); }
+    catch (e) { setMsg(friendlyAuthError(e.code)); }
+    setBusy(false);
+  }
+  async function recheck() {
+    setBusy(true); setMsg("");
+    try {
+      await firebase.auth().currentUser.reload();
+      await firebase.auth().currentUser.getIdToken(true);
+      const ok = !!firebase.auth().currentUser.emailVerified;
+      setVerified(ok);
+      if (!ok) setMsg("Δεν φαίνεται ακόμα επιβεβαιωμένο. Πάτησε το link στο email και ξαναδοκίμασε.");
+    } catch (e) { setMsg("Κάτι πήγε στραβά. Δοκίμασε ξανά."); }
+    setBusy(false);
+  }
+  async function runImport() {
+    setBusy(true); setMsg("");
+    try {
+      const snap = await db.collection("tutoring_data").get();
+      if (snap.empty) { setMsg("Δεν βρέθηκαν παλιά δεδομένα για εισαγωγή."); setBusy(false); return; }
+      const target = window.__familyCollectionRef;
+      let n = 0;
+      for (const d of snap.docs) { await target.doc(d.id).set(d.data()); n++; }
+      setMsg("Η εισαγωγή ολοκληρώθηκε: " + n + " εγγραφές."); setDone(true); onImported();
+    } catch (e) {
+      console.error(e);
+      setMsg(e && e.code === "permission-denied" ? "Δεν επιτρέπεται η πρόσβαση στα παλιά δεδομένα από αυτόν τον λογαριασμό." : "Η εισαγωγή απέτυχε. Δοκίμασε ξανά.");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(32,41,58,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}>
+      <div style={{ ...authCard, maxWidth: 400 }}>
+        <h1 style={{ ...authTitle, fontSize: 20 }}>Εισαγωγή παλιών δεδομένων</h1>
+        <p style={{ ...authSubtitle, marginBottom: 16 }}>Μεταφέρει τα μαθήματα, τα παιδιά και τις πληρωμές της παλιάς εφαρμογής στην οικογένειά σου. Αν υπάρχουν ήδη ίδια στοιχεία εδώ, θα αντικατασταθούν.</p>
+        {msg && <p style={{ ...authError, color: done ? "#5C7A5F" : "#B5533C" }}>{msg}</p>}
+        {!verified ? (
+          <>
+            <p style={{ fontSize: 13, color: "#33404F", margin: "0 0 12px" }}>Για ασφάλεια, πρέπει πρώτα να επιβεβαιώσεις ότι το email <strong>{user.email}</strong> είναι δικό σου.</p>
+            {!sent ? (
+              <button onClick={sendVerify} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : "Στείλε email επιβεβαίωσης"}</button>
+            ) : (
+              <>
+                <p style={{ fontSize: 13, color: "#5C7A5F", margin: "0 0 12px" }}>Στάλθηκε. Άνοιξε το email, πάτησε το link και γύρνα εδώ.</p>
+                <button onClick={recheck} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : "Το επιβεβαίωσα"}</button>
+              </>
+            )}
+          </>
+        ) : !done ? (
+          <button onClick={runImport} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "Εισαγωγή…" : "Εισαγωγή τώρα"}</button>
+        ) : null}
+        <button onClick={onClose} style={authBtnSecondary}>{done ? "Κλείσιμο" : "Άκυρο"}</button>
+      </div>
+    </div>
+  );
+}
+
+root.render(<AppGate />);
 </script>
 </body>
 </html>
