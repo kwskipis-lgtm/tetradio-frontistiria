@@ -1988,7 +1988,88 @@ const authBtnSecondary = { ...authBtn, background: "#fff", color: "#20293A", bor
 const authLink = { background: "none", border: "none", color: "#8A7A57", fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "system-ui, sans-serif" };
 const authError = { fontSize: 13, color: "#B5533C", margin: "0 0 12px", fontFamily: "system-ui, sans-serif" };
 
-function friendlyAuthError(code) {
+const AUTH = {
+  el: {
+    errs: {
+      "auth/invalid-email": "Το email δεν φαίνεται έγκυρο.",
+      "auth/email-already-in-use": "Υπάρχει ήδη λογαριασμός με αυτό το email.",
+      "auth/weak-password": "Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες.",
+      "auth/wrong-password": "Λάθος κωδικός.",
+      "auth/user-not-found": "Δεν βρέθηκε λογαριασμός με αυτό το email.",
+      "auth/invalid-credential": "Λάθος email ή κωδικός.",
+      "auth/too-many-requests": "Πολλές αποτυχημένες προσπάθειες. Δοκίμασε ξανά σε λίγο.",
+    },
+    generic: "Κάτι πήγε στραβά. Δοκίμασε ξανά.",
+    fillBoth: "Συμπλήρωσε email και κωδικό.", fillEmail: "Γράψε πρώτα το email σου.",
+    resetTitle: "Επαναφορά κωδικού",
+    resetSentMsg: "Αν υπάρχει λογαριασμός με αυτό το email, σου στείλαμε ένα μήνυμα με σύνδεσμο για να φτιάξεις νέο κωδικό. Έλεγξε και τα Ανεπιθύμητα/Spam.",
+    backToLogin: "Πίσω στη σύνδεση",
+    resetHelp: "Γράψε το email του λογαριασμού σου και θα σου στείλουμε σύνδεσμο για νέο κωδικό.",
+    sendLink: "Αποστολή συνδέσμου", back: "Πίσω",
+    loginSub: "Σύνδεση στον λογαριασμό σου", registerSub: "Δημιουργία λογαριασμού",
+    password: "Κωδικός", login: "Σύνδεση", register: "Εγγραφή",
+    toRegister: "Δεν έχεις λογαριασμό; Κάνε εγγραφή", forgot: "Ξέχασα τον κωδικό μου", toLogin: "Έχεις ήδη λογαριασμό; Συνδέσου",
+    otherLang: "English",
+    createFail: "Η δημιουργία απέτυχε. Δοκίμασε ξανά.", needCode: "Γράψε τον κωδικό πρόσκλησης.",
+    noFamily: "Δεν βρέθηκε οικογένεια με αυτόν τον κωδικό.",
+    readyTitle: "Η οικογένειά σου είναι έτοιμη",
+    readySub: "Μοιράσου αυτόν τον κωδικό με τον/την σύζυγο, ώστε να μπείτε στα ίδια δεδομένα",
+    continueApp: "Συνέχεια στην εφαρμογή",
+    newFamily: "Νέα οικογένεια", newFamilySub: "Θα φτιάξουμε έναν κωδικό πρόσκλησης που θα δώσεις μετά στον/στη σύζυγο.",
+    createFamilyBtn: "Δημιουργία οικογένειας",
+    joinTitle: "Συμμετοχή σε οικογένεια", joinSub: "Γράψε τον κωδικό πρόσκλησης που σου έδωσε ο/η σύζυγος.",
+    codePh: "π.χ. AB3CD9", joinBtn: "Συμμετοχή",
+    welcome: "Καλωσόρισες!", welcomeSub: "Είσαι ο πρώτος γονέας που φτιάχνει την οικογένεια, ή έχεις ήδη κωδικό πρόσκλησης;",
+    createNew: "Δημιουργία νέας οικογένειας", haveCode: "Έχω κωδικό πρόσκλησης",
+  },
+  en: {
+    errs: {
+      "auth/invalid-email": "That email doesn't look valid.",
+      "auth/email-already-in-use": "An account with this email already exists.",
+      "auth/weak-password": "The password must be at least 6 characters.",
+      "auth/wrong-password": "Wrong password.",
+      "auth/user-not-found": "No account was found with this email.",
+      "auth/invalid-credential": "Wrong email or password.",
+      "auth/too-many-requests": "Too many failed attempts. Please try again in a moment.",
+    },
+    generic: "Something went wrong. Please try again.",
+    fillBoth: "Enter your email and password.", fillEmail: "Enter your email first.",
+    resetTitle: "Reset password",
+    resetSentMsg: "If an account exists with this email, we've sent you a message with a link to set a new password. Check your Spam folder too.",
+    backToLogin: "Back to sign in",
+    resetHelp: "Enter your account email and we'll send you a link to set a new password.",
+    sendLink: "Send link", back: "Back",
+    loginSub: "Sign in to your account", registerSub: "Create your account",
+    password: "Password", login: "Sign in", register: "Sign up",
+    toRegister: "Don't have an account? Sign up", forgot: "Forgot my password", toLogin: "Already have an account? Sign in",
+    otherLang: "Ελληνικά",
+    createFail: "Creating the family failed. Please try again.", needCode: "Enter the invitation code.",
+    noFamily: "No family was found with this code.",
+    readyTitle: "Your family is ready",
+    readySub: "Share this code with your partner so you both see the same data",
+    continueApp: "Continue to the app",
+    newFamily: "New family", newFamilySub: "We'll create an invitation code that you can give to your partner afterwards.",
+    createFamilyBtn: "Create family",
+    joinTitle: "Join a family", joinSub: "Enter the invitation code your partner gave you.",
+    codePh: "e.g. AB3CD9", joinBtn: "Join",
+    welcome: "Welcome!", welcomeSub: "Are you the first parent creating the family, or do you already have an invitation code?",
+    createNew: "Create a new family", haveCode: "I have an invitation code",
+  },
+};
+function useAuthLang() {
+  const [lang, setLang] = useState(() => { try { return localStorage.getItem("altis_lang") === "en" ? "en" : "el"; } catch (e) { return "el"; } });
+  const toggle = () => { const n = lang === "el" ? "en" : "el"; try { localStorage.setItem("altis_lang", n); } catch (e) {} setLang(n); };
+  return [lang, toggle];
+}
+function AuthLangLink({ a, toggle }) {
+  return <div style={{ textAlign: "center", marginTop: 14 }}><button style={authLink} onClick={toggle} aria-label="EL/EN">{a.otherLang}</button></div>;
+}
+
+function friendlyAuthError(code, lang) {
+  const A = AUTH[lang] || AUTH.el;
+  return A.errs[code] || (A.generic + (code ? " (" + code + ")" : ""));
+}
+function friendlyAuthErrorOld(code) {
   const map = {
     "auth/invalid-email": "Το email δεν φαίνεται έγκυρο.",
     "auth/email-already-in-use": "Υπάρχει ήδη λογαριασμός με αυτό το email.",
@@ -2010,6 +2091,8 @@ function generateFamilyCode() {
 }
 
 function LoginScreen() {
+  const [lang, toggleLang] = useAuthLang();
+  const a = AUTH[lang];
   const [mode, setMode] = useState("login"); // "login" | "register" | "forgot"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -2019,7 +2102,7 @@ function LoginScreen() {
 
   async function submit() {
     setError("");
-    if (!email.trim() || !password) { setError("Συμπλήρωσε email και κωδικό."); return; }
+    if (!email.trim() || !password) { setError(a.fillBoth); return; }
     setBusy(true);
     try {
       if (mode === "login") {
@@ -2028,20 +2111,20 @@ function LoginScreen() {
         await firebase.auth().createUserWithEmailAndPassword(email.trim(), password);
       }
     } catch (e) {
-      setError(friendlyAuthError(e.code));
+      setError(friendlyAuthError(e.code, lang));
     }
     setBusy(false);
   }
 
   async function submitReset() {
     setError("");
-    if (!email.trim()) { setError("Γράψε πρώτα το email σου."); return; }
+    if (!email.trim()) { setError(a.fillEmail); return; }
     setBusy(true);
     try {
       await firebase.auth().sendPasswordResetEmail(email.trim());
       setResetSent(true);
     } catch (e) {
-      setError(friendlyAuthError(e.code));
+      setError(friendlyAuthError(e.code, lang));
     }
     setBusy(false);
   }
@@ -2050,23 +2133,24 @@ function LoginScreen() {
     return (
       <div style={authWrap}>
         <div style={authCard}>
-          <h1 style={authTitle}>Επαναφορά κωδικού</h1>
+          <h1 style={authTitle}>{a.resetTitle}</h1>
           {resetSent ? (
             <>
-              <p style={authSubtitle}>Αν υπάρχει λογαριασμός με αυτό το email, σου στείλαμε ένα μήνυμα με σύνδεσμο για να φτιάξεις νέο κωδικό. Έλεγξε και τα Ανεπιθύμητα/Spam.</p>
-              <button style={authBtn} onClick={() => { setMode("login"); setResetSent(false); setError(""); }}>Πίσω στη σύνδεση</button>
+              <p style={authSubtitle}>{a.resetSentMsg}</p>
+              <button style={authBtn} onClick={() => { setMode("login"); setResetSent(false); setError(""); }}>{a.backToLogin}</button>
             </>
           ) : (
             <>
-              <p style={authSubtitle}>Γράψε το email του λογαριασμού σου και θα σου στείλουμε σύνδεσμο για νέο κωδικό.</p>
+              <p style={authSubtitle}>{a.resetHelp}</p>
               {error && <p style={authError}>{error}</p>}
               <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={authInput} autoCapitalize="none" onKeyDown={(e) => e.key === "Enter" && submitReset()} />
-              <button onClick={submitReset} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : "Αποστολή συνδέσμου"}</button>
+              <button onClick={submitReset} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : a.sendLink}</button>
               <div style={{ textAlign: "center" }}>
-                <button style={authLink} onClick={() => { setMode("login"); setError(""); }}>Πίσω</button>
+                <button style={authLink} onClick={() => { setMode("login"); setError(""); }}>{a.back}</button>
               </div>
             </>
           )}
+          <AuthLangLink a={a} toggle={toggleLang} />
         </div>
       </div>
     );
@@ -2076,29 +2160,32 @@ function LoginScreen() {
     <div style={authWrap}>
       <div style={authCard}>
         <h1 style={authTitle}>Altis</h1>
-        <p style={authSubtitle}>{mode === "login" ? "Σύνδεση στον λογαριασμό σου" : "Δημιουργία λογαριασμού"}</p>
+        <p style={authSubtitle}>{mode === "login" ? a.loginSub : a.registerSub}</p>
         {error && <p style={authError}>{error}</p>}
         <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={authInput} autoCapitalize="none" />
-        <input type="password" placeholder="Κωδικός" value={password} onChange={(e) => setPassword(e.target.value)} style={authInput} onKeyDown={(e) => e.key === "Enter" && submit()} />
+        <input type="password" placeholder={a.password} value={password} onChange={(e) => setPassword(e.target.value)} style={authInput} onKeyDown={(e) => e.key === "Enter" && submit()} />
         <button onClick={submit} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 14 }}>
-          {busy ? "…" : mode === "login" ? "Σύνδεση" : "Εγγραφή"}
+          {busy ? "…" : mode === "login" ? a.login : a.register}
         </button>
         <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 8 }}>
           {mode === "login" ? (
             <>
-              <button style={authLink} onClick={() => { setMode("register"); setError(""); }}>Δεν έχεις λογαριασμό; Κάνε εγγραφή</button>
-              <button style={authLink} onClick={() => { setMode("forgot"); setError(""); }}>Ξέχασα τον κωδικό μου</button>
+              <button style={authLink} onClick={() => { setMode("register"); setError(""); }}>{a.toRegister}</button>
+              <button style={authLink} onClick={() => { setMode("forgot"); setError(""); }}>{a.forgot}</button>
             </>
           ) : (
-            <button style={authLink} onClick={() => { setMode("login"); setError(""); }}>Έχεις ήδη λογαριασμό; Συνδέσου</button>
+            <button style={authLink} onClick={() => { setMode("login"); setError(""); }}>{a.toLogin}</button>
           )}
         </div>
+        <AuthLangLink a={a} toggle={toggleLang} />
       </div>
     </div>
   );
 }
 
 function FamilySetupScreen({ user, onResolved }) {
+  const [lang, toggleLang] = useAuthLang();
+  const a = AUTH[lang];
   const [choice, setChoice] = useState(null); // null | "create" | "join"
   const [joinCode, setJoinCode] = useState("");
   const [createdCode, setCreatedCode] = useState("");
@@ -2122,25 +2209,25 @@ function FamilySetupScreen({ user, onResolved }) {
       await db.collection("app_users").doc(user.uid).set({ email: user.email, familyId: code }, { merge: true });
       setCreatedCode(code);
     } catch (e) {
-      setError("Η δημιουργία απέτυχε. Δοκίμασε ξανά.");
+      setError(a.createFail);
     }
     setBusy(false);
   }
 
   async function joinFamily() {
     const code = joinCode.trim().toUpperCase();
-    if (!code) { setError("Γράψε τον κωδικό πρόσκλησης."); return; }
+    if (!code) { setError(a.needCode); return; }
     setBusy(true);
     setError("");
     try {
       const ref = db.collection("app_families").doc(code);
       const snap = await ref.get();
-      if (!snap.exists) { setError("Δεν βρέθηκε οικογένεια με αυτόν τον κωδικό."); setBusy(false); return; }
+      if (!snap.exists) { setError(a.noFamily); setBusy(false); return; }
       await ref.update({ members: firebase.firestore.FieldValue.arrayUnion(user.uid) });
       await db.collection("app_users").doc(user.uid).set({ email: user.email, familyId: code }, { merge: true });
       onResolved(code);
     } catch (e) {
-      setError("Κάτι πήγε στραβά. Δοκίμασε ξανά.");
+      setError(a.generic);
     }
     setBusy(false);
   }
@@ -2149,12 +2236,12 @@ function FamilySetupScreen({ user, onResolved }) {
     return (
       <div style={authWrap}>
         <div style={authCard}>
-          <h1 style={authTitle}>Η οικογένειά σου είναι έτοιμη</h1>
-          <p style={authSubtitle}>Μοιράσου αυτόν τον κωδικό με τον/την σύζυγο, ώστε να μπείτε στα ίδια δεδομένα</p>
+          <h1 style={authTitle}>{a.readyTitle}</h1>
+          <p style={authSubtitle}>{a.readySub}</p>
           <div style={{ background: "#F1ECDD", borderRadius: 10, padding: "18px 0", textAlign: "center", fontSize: 30, fontWeight: 700, letterSpacing: 4, color: "#20293A", marginBottom: 18, fontFamily: "system-ui, sans-serif" }}>
             {createdCode}
           </div>
-          <button onClick={() => onResolved(createdCode)} style={authBtn}>Συνέχεια στην εφαρμογή</button>
+          <button onClick={() => onResolved(createdCode)} style={authBtn}>{a.continueApp}</button>
         </div>
       </div>
     );
@@ -2164,11 +2251,11 @@ function FamilySetupScreen({ user, onResolved }) {
     return (
       <div style={authWrap}>
         <div style={authCard}>
-          <h1 style={authTitle}>Νέα οικογένεια</h1>
-          <p style={authSubtitle}>Θα φτιάξουμε έναν κωδικό πρόσκλησης που θα δώσεις μετά στον/στη σύζυγο.</p>
+          <h1 style={authTitle}>{a.newFamily}</h1>
+          <p style={authSubtitle}>{a.newFamilySub}</p>
           {error && <p style={authError}>{error}</p>}
-          <button onClick={createFamily} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : "Δημιουργία οικογένειας"}</button>
-          <button onClick={() => setChoice(null)} style={authBtnSecondary}>Πίσω</button>
+          <button onClick={createFamily} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : a.createFamilyBtn}</button>
+          <button onClick={() => setChoice(null)} style={authBtnSecondary}>{a.back}</button>
         </div>
       </div>
     );
@@ -2178,12 +2265,12 @@ function FamilySetupScreen({ user, onResolved }) {
     return (
       <div style={authWrap}>
         <div style={authCard}>
-          <h1 style={authTitle}>Συμμετοχή σε οικογένεια</h1>
-          <p style={authSubtitle}>Γράψε τον κωδικό πρόσκλησης που σου έδωσε ο/η σύζυγος.</p>
+          <h1 style={authTitle}>{a.joinTitle}</h1>
+          <p style={authSubtitle}>{a.joinSub}</p>
           {error && <p style={authError}>{error}</p>}
-          <input type="text" placeholder="π.χ. AB3CD9" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} style={{ ...authInput, textAlign: "center", fontSize: 20, letterSpacing: 3, textTransform: "uppercase" }} onKeyDown={(e) => e.key === "Enter" && joinFamily()} />
-          <button onClick={joinFamily} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : "Συμμετοχή"}</button>
-          <button onClick={() => setChoice(null)} style={authBtnSecondary}>Πίσω</button>
+          <input type="text" placeholder={a.codePh} value={joinCode} onChange={(e) => setJoinCode(e.target.value)} style={{ ...authInput, textAlign: "center", fontSize: 20, letterSpacing: 3, textTransform: "uppercase" }} onKeyDown={(e) => e.key === "Enter" && joinFamily()} />
+          <button onClick={joinFamily} disabled={busy} style={{ ...authBtn, opacity: busy ? 0.6 : 1, marginBottom: 10 }}>{busy ? "…" : a.joinBtn}</button>
+          <button onClick={() => setChoice(null)} style={authBtnSecondary}>{a.back}</button>
         </div>
       </div>
     );
@@ -2192,10 +2279,11 @@ function FamilySetupScreen({ user, onResolved }) {
   return (
     <div style={authWrap}>
       <div style={authCard}>
-        <h1 style={authTitle}>Καλωσόρισες!</h1>
-        <p style={authSubtitle}>Είσαι ο πρώτος γονέας που φτιάχνει την οικογένεια, ή έχεις ήδη κωδικό πρόσκλησης;</p>
-        <button onClick={() => setChoice("create")} style={{ ...authBtn, marginBottom: 10 }}>Δημιουργία νέας οικογένειας</button>
-        <button onClick={() => setChoice("join")} style={authBtnSecondary}>Έχω κωδικό πρόσκλησης</button>
+        <h1 style={authTitle}>{a.welcome}</h1>
+        <p style={authSubtitle}>{a.welcomeSub}</p>
+        <button onClick={() => setChoice("create")} style={{ ...authBtn, marginBottom: 10 }}>{a.createNew}</button>
+        <button onClick={() => setChoice("join")} style={authBtnSecondary}>{a.haveCode}</button>
+        <AuthLangLink a={a} toggle={toggleLang} />
       </div>
     </div>
   );
@@ -2218,6 +2306,9 @@ function AppGate() {
   useEffect(() => {
     if (IS_DEMO) return;
     const unsub = firebase.auth().onAuthStateChanged(async (u) => {
+      // A leftover anonymous session (from the old single-family app, which shares this origin)
+      // must never count as a signed-in account: sign it out so the login screen appears.
+      if (u && u.isAnonymous) { firebase.auth().signOut().catch(() => {}); setUser(null); setFamilyId(null); return; }
       setUser(u || null);
       if (u) {
         try {
