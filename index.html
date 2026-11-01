@@ -20,10 +20,11 @@
   .altis-quote-side { display: none; }
   .altis-quote-inline { display: block; }
   @media (min-width: 1180px) {
-    .altis-quote-side { display: block; position: absolute; top: 0; bottom: 0; right: calc(100% + 48px); width: 270px; }
+    /* χωρίς top: το πάνελ μένει στο ύψος όπου βρίσκεται στον κώδικα, δηλαδή δίπλα στον πίνακα οφειλών */
+    .altis-quote-side { display: block; position: absolute; right: calc(100% + 48px); width: 270px; margin-top: 18px; }
     .altis-quote-inline { display: none; }
   }
-  .altis-quote-card { position: sticky; top: 24px; border-left: 2px solid #C9A961; padding: 4px 0 4px 18px; color: #20293A; }
+  .altis-quote-card { border-left: 2px solid #C9A961; padding: 4px 0 4px 18px; color: #20293A; }
   .altis-quote-text { font-family: 'Iowan Old Style', 'Georgia', serif; font-style: italic; font-size: 17px; line-height: 1.55; margin: 0 0 12px; }
   .altis-quote-author { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; color: #8A6D2F; }
   .altis-quote-years { font-family: system-ui, sans-serif; font-size: 12px; color: #9A8F72; margin-top: 2px; }
@@ -167,6 +168,7 @@ const STRINGS = {
   el: {
     appName: "Altis", tagline: "Τετράδιο φροντιστηρίων",
     subtitle: "Πρόγραμμα, κόστος και ιστορικό ανά μήνα · ιδιωτικά, μόνο για την οικογένειά σου.",
+    quoteText: THALES_QUOTE,
     quoteAuthor: "Θαλής ο Μιλήσιος", quoteYears: "περ. 624–546 π.Χ.",
     quoteExpl: "Ευτυχισμένος είναι όποιος έχει πλούσια ψυχή, υγιές σώμα και καλή παιδεία.",
     demoBadge: "ΔΟΚΙΜΗ",
@@ -276,8 +278,9 @@ const STRINGS = {
   en: {
     appName: "Altis", tagline: "Tutoring Notebook",
     subtitle: "Schedule, cost and history by month · private, just for your family.",
+    quoteText: "Happy is the one who has a rich soul, a healthy body and a good education.",
     quoteAuthor: "Thales of Miletus", quoteYears: "c. 624–546 BC",
-    quoteExpl: "Happy is the one who has a rich soul, a healthy body and a good education.",
+    quoteExpl: "Original in Ancient Greek: «" + THALES_QUOTE + "»",
     demoBadge: "DEMO",
     refresh: "Refresh", stats: "Statistics", titles: "Children", subjectsBtn: "Lessons & activities", accountBtn: "Account",
     prevMonth: "Previous month", nextMonth: "Next month",
@@ -963,14 +966,6 @@ function TutoringLedger() {
   return (
     <div style={{ background: "#F7F5EF", minHeight: "100%", fontFamily: "'Iowan Old Style', 'Georgia', serif", color: "#20293A", padding: "24px 16px 60px" }}>
       <div style={{ maxWidth: 560, margin: "0 auto", position: "relative" }}>
-        <aside className="altis-quote-side" aria-label={t.quoteAuthor}>
-          <div className="altis-quote-card">
-            <p className="altis-quote-text">«{THALES_QUOTE}»</p>
-            <div className="altis-quote-author">{t.quoteAuthor}</div>
-            <div className="altis-quote-years">{t.quoteYears}</div>
-            <div className="altis-quote-expl">{t.quoteExpl}</div>
-          </div>
-        </aside>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4 }}>
           <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0, letterSpacing: 0.2 }}>
             {t.appName}
@@ -1000,7 +995,7 @@ function TutoringLedger() {
           {t.subtitle}
         </p>
         <div className="altis-quote-inline">
-          <p style={{ marginTop: -8 }}>«{THALES_QUOTE}» <span>· {t.quoteAuthor}</span></p>
+          <p style={{ marginTop: -8 }}>«{t.quoteText}» <span>· {t.quoteAuthor}</span></p>
         </div>
 
         <div style={monthNavStyle}>
@@ -1024,6 +1019,14 @@ function TutoringLedger() {
           </div>
         )}
 
+        <aside className="altis-quote-side" aria-label={t.quoteAuthor}>
+          <div className="altis-quote-card">
+            <p className="altis-quote-text">«{t.quoteText}»</p>
+            <div className="altis-quote-author">{t.quoteAuthor}</div>
+            <div className="altis-quote-years">{t.quoteYears}</div>
+            <div className="altis-quote-expl">{t.quoteExpl}</div>
+          </div>
+        </aside>
         <div style={totalsCard}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
             <span style={{ fontFamily: "system-ui, sans-serif", fontSize: 13, color: "#6B6455" }}>{t.monthTotalDue}</span>
