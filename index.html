@@ -15,22 +15,6 @@
   html, body { margin: 0; padding: 0; background: #F7F5EF; }
   * { box-sizing: border-box; }
   button { font-family: inherit; }
-
-  /* ---- Ρητό Θαλή: αριστερό πάνελ σε μεγάλες οθόνες, μικρή γραμμή σε κινητά ---- */
-  .altis-quote-side { display: none; }
-  .altis-quote-inline { display: block; }
-  @media (min-width: 1180px) {
-    /* χωρίς top: το πάνελ μένει στο ύψος όπου βρίσκεται στον κώδικα, δηλαδή δίπλα στον πίνακα οφειλών */
-    .altis-quote-side { display: block; position: absolute; right: calc(100% + 48px); width: 270px; margin-top: 18px; }
-    .altis-quote-inline { display: none; }
-  }
-  .altis-quote-card { border-left: 2px solid #C9A961; padding: 4px 0 4px 18px; color: #20293A; }
-  .altis-quote-text { font-family: 'Iowan Old Style', 'Georgia', serif; font-style: italic; font-size: 17px; line-height: 1.55; margin: 0 0 12px; }
-  .altis-quote-author { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; color: #8A6D2F; }
-  .altis-quote-years { font-family: system-ui, sans-serif; font-size: 12px; color: #9A8F72; margin-top: 2px; }
-  .altis-quote-expl { font-family: system-ui, sans-serif; font-size: 12.5px; line-height: 1.5; color: #6B6455; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #E4DECC; }
-  .altis-quote-inline p { font-family: 'Iowan Old Style', 'Georgia', serif; font-style: italic; font-size: 12.5px; line-height: 1.45; color: #6B6455; margin: 0 0 18px; padding-left: 10px; border-left: 2px solid #C9A961; }
-  .altis-quote-inline span { font-family: system-ui, sans-serif; font-style: normal; font-size: 11.5px; color: #9A8F72; white-space: nowrap; }
 </style>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -161,16 +145,10 @@ function catLabel(lang, cat) { return (CATEGORY_LABELS[lang] || CATEGORY_LABELS.
 
 const SUBJECT_COLORS = ["#B5533C", "#4E6E8E", "#6B8F71", "#8A7A57", "#8E5A8A", "#B08A3E", "#3F8280", "#A85C7A"];
 
-// Ρητό του Θαλή (ίδιο σε ΕΛ/EN· η εξήγηση μεταφράζεται στα STRINGS)
-const THALES_QUOTE = "Ευτυχής εστίν ο την ψυχήν πλουσίαν, το σώμα υγιές και την παιδείαν αγαθήν έχων.";
-
 const STRINGS = {
   el: {
     appName: "Altis", tagline: "Τετράδιο φροντιστηρίων",
     subtitle: "Πρόγραμμα, κόστος και ιστορικό ανά μήνα · ιδιωτικά, μόνο για την οικογένειά σου.",
-    quoteText: THALES_QUOTE,
-    quoteAuthor: "Θαλής ο Μιλήσιος", quoteYears: "περ. 624–546 π.Χ.",
-    quoteExpl: "Ευτυχισμένος είναι όποιος έχει πλούσια ψυχή, υγιές σώμα και καλή παιδεία.",
     demoBadge: "ΔΟΚΙΜΗ",
     refresh: "Ανανέωση", stats: "Στατιστικά", titles: "Παιδιά", subjectsBtn: "Μαθήματα & δραστηριότητες", accountBtn: "Λογαριασμός",
     prevMonth: "Προηγούμενος μήνας", nextMonth: "Επόμενος μήνας",
@@ -255,6 +233,17 @@ const STRINGS = {
     fixedSlots: "Σταθερές μέρες & ώρες",
     dayLabel: "Μέρα", fromLabel: "Από", toLabel: "Έως", addTimeSlot: "Προσθήκη ώρας",
     save: "Αποθήκευση",
+    takerLabel: "Ποιος τον/την πάει;", takerNone: "Δεν έχει οριστεί", parentDefault: (i) => "Γονιός " + (i === 1 ? "Α" : "Β"),
+    parentsTitle: "Οι γονείς", parentsHelp: "Γράψε τα ονόματα, για να ορίζεις ποιος πάει το παιδί σε κάθε δραστηριότητα.", parentNamePh: (i) => "Όνομα γονιού " + (i === 1 ? "Α" : "Β"),
+    conflictsTitle: (n) => n === 1 ? "1 σύγκρουση προγράμματος" : n + " συγκρούσεις προγράμματος",
+    conflictChild: "Το ίδιο παιδί έχει δύο δραστηριότητες ταυτόχρονα.",
+    conflictParent: (who) => "Ο/Η " + who + " πρέπει να πάει δύο παιδιά ταυτόχρονα.",
+    conflictOpen: "Ταυτόχρονες δραστηριότητες· δεν έχει οριστεί ποιος πάει το κάθε παιδί.",
+    takenByTag: (who) => "πάει: " + who,
+    limitLabel: "Μηνιαίο όριο κόστους (€)", limitHelp: "Άφησέ το κενό αν δεν θέλεις όριο. Θα σε ειδοποιεί όταν ο μήνας το πλησιάζει ή το ξεπερνά.",
+    limitOver: (c, l, d) => "Το κόστος του μήνα (" + c + ") ξεπερνά το όριό σου (" + l + ") κατά " + d + ".",
+    limitNear: (c, l) => "Πλησιάζεις το όριο του μήνα: " + c + " από " + l + ".",
+    fcSoFar: "Μέχρι και αυτόν τον μήνα", fcRest: "Υπόλοιπο έτους (πρόβλεψη)", fcAvg: "Μέσος όρος μήνα", fcLimitLine: "όριο",
     extraLinkTo: "Σύνδεση με", extraOther: "Άλλο…",
     extraNamePlaceholder: "π.χ. Χημεία",
     dateLabel: "Ημερομηνία", costLabel: "Κόστος (€)",
@@ -278,9 +267,6 @@ const STRINGS = {
   en: {
     appName: "Altis", tagline: "Tutoring Notebook",
     subtitle: "Schedule, cost and history by month · private, just for your family.",
-    quoteText: "Happy is the one who has a rich soul, a healthy body and a good education.",
-    quoteAuthor: "Thales of Miletus", quoteYears: "c. 624–546 BC",
-    quoteExpl: "Original in Ancient Greek: «" + THALES_QUOTE + "»",
     demoBadge: "DEMO",
     refresh: "Refresh", stats: "Statistics", titles: "Children", subjectsBtn: "Lessons & activities", accountBtn: "Account",
     prevMonth: "Previous month", nextMonth: "Next month",
@@ -365,6 +351,17 @@ const STRINGS = {
     fixedSlots: "Fixed days & times",
     dayLabel: "Day", fromLabel: "From", toLabel: "To", addTimeSlot: "Add time slot",
     save: "Save",
+    takerLabel: "Who takes them?", takerNone: "Not set", parentDefault: (i) => "Parent " + (i === 1 ? "A" : "B"),
+    parentsTitle: "The parents", parentsHelp: "Add your names so you can set who takes the child to each activity.", parentNamePh: (i) => "Parent " + (i === 1 ? "A" : "B") + " name",
+    conflictsTitle: (n) => n === 1 ? "1 schedule conflict" : n + " schedule conflicts",
+    conflictChild: "The same child has two activities at the same time.",
+    conflictParent: (who) => who + " has to take two children at the same time.",
+    conflictOpen: "Overlapping activities; it isn't set who takes each child.",
+    takenByTag: (who) => "taken by: " + who,
+    limitLabel: "Monthly cost limit (€)", limitHelp: "Leave empty for no limit. You'll be warned when a month gets close to it or goes over.",
+    limitOver: (c, l, d) => "This month's cost (" + c + ") is over your limit (" + l + ") by " + d + ".",
+    limitNear: (c, l) => "You're close to this month's limit: " + c + " of " + l + ".",
+    fcSoFar: "Up to and including this month", fcRest: "Rest of the year (forecast)", fcAvg: "Monthly average", fcLimitLine: "limit",
     extraLinkTo: "Link to", extraOther: "Other…",
     extraNamePlaceholder: "e.g. Chemistry",
     dateLabel: "Date", costLabel: "Cost (€)",
@@ -431,7 +428,7 @@ function generateOccurrences(year, monthIdx, subjects, monthData) {
           const remaining = Math.max(0, cost - paidAmount);
           list.push({
             key: ovKey, isExtra: false, subjectId: subj.id, billing: subj.billing || "lesson",
-            category: subj.category || CATEGORIES[0], childId: subj.childId || null,
+            category: subj.category || CATEGORIES[0], childId: subj.childId || null, takenBy: slot.takenBy || "",
             name: subj.name, date: iso, start: slot.start, end: slot.end,
             cost, paidAmount, remaining, paid: remaining <= 0.005, cancelled: !!ov.cancelled,
           });
@@ -625,6 +622,42 @@ function monthCostSummary(year, monthIdx, subjects, monthData, childNameFn, lang
   return { total, byCategory, byChild };
 }
 
+const DEFAULT_SETTINGS = { parents: ["", ""], monthlyLimit: 0 };
+function parentName(settings, lang, id) {
+  if (id !== "p1" && id !== "p2") return "";
+  const i = id === "p1" ? 1 : 2;
+  const nm = ((settings && settings.parents) || [])[i - 1];
+  return (nm && nm.trim()) || STRINGS[lang].parentDefault(i);
+}
+const toMin = (hhmm) => { const [h, m] = String(hhmm || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
+// Finds overlapping weekly slots between different activities that are still running.
+function findConflicts(subjects, settings, lang, todayISO) {
+  const t = STRINGS[lang];
+  const items = [];
+  subjects.forEach((s) => {
+    if (s.endDate && s.endDate < todayISO) return;
+    (s.slots || []).forEach((sl) => items.push({ s, sl }));
+  });
+  const out = [];
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const a = items[i], b = items[j];
+      if (a.sl.weekday !== b.sl.weekday) continue;
+      if (!(toMin(a.sl.start) < toMin(b.sl.end) && toMin(b.sl.start) < toMin(a.sl.end))) continue;
+      if (a.s.startDate && b.s.endDate && a.s.startDate > b.s.endDate) continue;
+      if (b.s.startDate && a.s.endDate && b.s.startDate > a.s.endDate) continue;
+      const sameChild = a.s.childId && a.s.childId === b.s.childId;
+      const ta = a.sl.takenBy || "", tb = b.sl.takenBy || "";
+      let reason = null;
+      if (sameChild) reason = t.conflictChild;
+      else if (ta && ta === tb) reason = t.conflictParent(parentName(settings, lang, ta));
+      else if (!ta || !tb) reason = t.conflictOpen;
+      if (reason) out.push({ day: a.sl.weekday, a, b, reason });
+    }
+  }
+  return out.sort((x, y) => x.day - y.day);
+}
+
 function TutoringLedger() {
   const [cursor, setCursor] = useState(() => new Date());
   const [children, setChildren] = useState([]);
@@ -645,6 +678,7 @@ function TutoringLedger() {
   const [undoTarget, setUndoTarget] = useState(null);
   const [filterChild, setFilterChild] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [error, setError] = useState("");
   const [lang, setLang] = useState(() => {
     try { return localStorage.getItem("altis_lang") || "el"; } catch (e) { return "el"; }
@@ -676,6 +710,23 @@ function TutoringLedger() {
       const s = await window.storage.get("subjects", true);
       setSubjects(s && s.value ? JSON.parse(s.value) : []);
     } catch (e) {}
+    try {
+      const st = await window.storage.get("settings", true);
+      setSettings({ ...DEFAULT_SETTINGS, ...(st && st.value ? JSON.parse(st.value) : {}) });
+    } catch (e) {}
+  }
+  async function saveSettings(patch) {
+    let current = settings;
+    try {
+      const res = await window.storage.get("settings", true);
+      current = { ...DEFAULT_SETTINGS, ...(res && res.value ? JSON.parse(res.value) : {}) };
+    } catch (e) {}
+    const next = { ...current, ...patch };
+    setSettings(next);
+    try {
+      const ok = await window.storage.set("settings", JSON.stringify(next), true);
+      setError(ok ? "" : t.saveFail);
+    } catch (e) { setError(t.saveFail); }
   }
   async function loadMonth() {
     try {
@@ -771,6 +822,16 @@ function TutoringLedger() {
 
   // settleKey is always o.subjectId (real subjects) or `extra_${name}` (freeform extras) —
   // it must match exactly what settleLessonSubject/resetSubjectPayments filter on.
+  const monthCost = useMemo(() => monthCostSummary(cursor.getFullYear(), cursor.getMonth(), subjects, monthData, childName, lang).total, [cursor, subjects, monthData, children, lang]);
+  const limitBanner = useMemo(() => {
+    const lim = Number(settings.monthlyLimit) || 0;
+    if (lim <= 0 || monthCost <= 0) return null;
+    if (monthCost > lim + 0.005) return { over: true, text: t.limitOver(fmtEUR(monthCost, lang), fmtEUR(lim, lang), fmtEUR(monthCost - lim, lang)) };
+    if (monthCost >= lim * 0.9) return { over: false, text: t.limitNear(fmtEUR(monthCost, lang), fmtEUR(lim, lang)) };
+    return null;
+  }, [monthCost, settings, lang]);
+  const conflicts = useMemo(() => findConflicts(subjects, settings, lang, todayISO), [subjects, settings, lang, todayISO]);
+  const [showConflicts, setShowConflicts] = useState(false);
   const totals = useMemo(() => {
     let owed = 0, paidSum = 0, cancelledCount = 0;
     const bySubject = {};
@@ -965,7 +1026,7 @@ function TutoringLedger() {
 
   return (
     <div style={{ background: "#F7F5EF", minHeight: "100%", fontFamily: "'Iowan Old Style', 'Georgia', serif", color: "#20293A", padding: "24px 16px 60px" }}>
-      <div style={{ maxWidth: 560, margin: "0 auto", position: "relative" }}>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4 }}>
           <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0, letterSpacing: 0.2 }}>
             {t.appName}
@@ -994,9 +1055,6 @@ function TutoringLedger() {
         <p style={{ fontFamily: "system-ui, sans-serif", fontSize: 13, color: "#6B6455", margin: "0 0 20px" }}>
           {t.subtitle}
         </p>
-        <div className="altis-quote-inline">
-          <p style={{ marginTop: -8 }}>«{t.quoteText}» <span>· {t.quoteAuthor}</span></p>
-        </div>
 
         <div style={monthNavStyle}>
           <button onClick={() => shiftMonth(-1)} style={navBtn} aria-label={t.prevMonth}><ChevronLeft size={18} /></button>
@@ -1019,14 +1077,9 @@ function TutoringLedger() {
           </div>
         )}
 
-        <aside className="altis-quote-side" aria-label={t.quoteAuthor}>
-          <div className="altis-quote-card">
-            <p className="altis-quote-text">«{t.quoteText}»</p>
-            <div className="altis-quote-author">{t.quoteAuthor}</div>
-            <div className="altis-quote-years">{t.quoteYears}</div>
-            <div className="altis-quote-expl">{t.quoteExpl}</div>
-          </div>
-        </aside>
+        {limitBanner && (
+          <div style={{ background: limitBanner.over ? "#F8E7E1" : "#FBF3DF", border: "1px solid " + (limitBanner.over ? "#E5B8AA" : "#E8D69B"), color: limitBanner.over ? "#8A3A28" : "#6E5A1E", borderRadius: 10, padding: "9px 12px", fontFamily: "system-ui, sans-serif", fontSize: 12.5, lineHeight: 1.45, marginBottom: 10 }}>{limitBanner.text}</div>
+        )}
         <div style={totalsCard}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
             <span style={{ fontFamily: "system-ui, sans-serif", fontSize: 13, color: "#6B6455" }}>{t.monthTotalDue}</span>
@@ -1093,6 +1146,20 @@ function TutoringLedger() {
             </div>
           )}
         </div>
+
+        {conflicts.length > 0 && (
+          <div style={{ background: "#FBF3DF", border: "1px solid #E8D69B", borderRadius: 10, padding: "9px 12px", fontFamily: "system-ui, sans-serif", fontSize: 12.5, color: "#6E5A1E", marginBottom: 12 }}>
+            <button onClick={() => setShowConflicts((v) => !v)} style={{ background: "none", border: "none", padding: 0, font: "inherit", fontWeight: 700, color: "inherit", cursor: "pointer", width: "100%", textAlign: "left" }}>
+              ⚠ {t.conflictsTitle(conflicts.length)} {showConflicts ? "▴" : "▾"}
+            </button>
+            {showConflicts && conflicts.map((c, i) => (
+              <div key={i} style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed #E8D69B", lineHeight: 1.45 }}>
+                <div style={{ fontWeight: 600 }}>{WEEKDAYS[lang][c.day]} · {c.a.s.name}{childName(c.a.s.childId) ? " (" + childName(c.a.s.childId) + ")" : ""} {c.a.sl.start}–{c.a.sl.end} ↔ {c.b.s.name}{childName(c.b.s.childId) ? " (" + childName(c.b.s.childId) + ")" : ""} {c.b.sl.start}–{c.b.sl.end}</div>
+                <div>{c.reason}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div style={{ marginBottom: 14, display: "flex", gap: 8 }}>
           <button onClick={() => setShowExtra(true)} style={{ ...addBtn, flex: 1, background: "#fff", color: "#8A7A57", border: "1px solid #D8C9A0" }}>
@@ -1178,10 +1245,10 @@ function TutoringLedger() {
       </div>
 
       {activeDay && (
-        <DayDetailModal lang={lang} date={activeDay} occs={byDate.get(activeDay) || []} subjects={subjects} childName={childName} onClose={() => setActiveDay(null)} onToggle={toggleField} onRemove={removeExtra} />
+        <DayDetailModal lang={lang} date={activeDay} occs={byDate.get(activeDay) || []} subjects={subjects} childName={childName} settings={settings} onClose={() => setActiveDay(null)} onToggle={toggleField} onRemove={removeExtra} />
       )}
       {showSubjects && (
-        <SubjectsModal lang={lang} subjects={subjects} children={children} onClose={() => setShowSubjects(false)} onSave={saveSubject} onDelete={deleteSubject} onAddChild={addChild} />
+        <SubjectsModal lang={lang} settings={settings} subjects={subjects} children={children} onClose={() => setShowSubjects(false)} onSave={saveSubject} onDelete={deleteSubject} onAddChild={addChild} />
       )}
       {showChildren && (
         <ChildrenModal lang={lang} children={children} onClose={() => setShowChildren(false)} onAdd={addChild} onDelete={deleteChild} />
@@ -1190,13 +1257,13 @@ function TutoringLedger() {
         <ExtraLessonModal lang={lang} subjects={subjects} children={children} onClose={() => setShowExtra(false)} onSave={addExtra} />
       )}
       {showAccount && (
-        <AccountModal lang={lang} onClose={() => setShowAccount(false)} />
+        <AccountModal lang={lang} settings={settings} onSaveSettings={saveSettings} onClose={() => setShowAccount(false)} />
       )}
       {showHistory && (
         <PaymentHistoryModal lang={lang} initialYear={cursor.getFullYear()} onClose={() => setShowHistory(false)} />
       )}
       {showStats && (
-        <StatsModal lang={lang} subjects={subjects} childName={childName} initialYear={cursor.getFullYear()} onClose={() => setShowStats(false)} />
+        <StatsModal lang={lang} settings={settings} onSaveSettings={saveSettings} subjects={subjects} childName={childName} initialYear={cursor.getFullYear()} onClose={() => setShowStats(false)} />
       )}
       {settleTarget && (
         <SettleConfirmModal lang={lang} target={settleTarget} onCancel={() => setSettleTarget(null)} onConfirm={confirmSettle} />
@@ -1228,7 +1295,7 @@ const toggleChipActive = { background: "#20293A", color: "#F7F5EF", border: "1px
 function overlay() { return { position: "fixed", inset: 0, background: "rgba(32,41,58,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 50 }; }
 function sheet() { return { background: "#FFFDF8", width: "100%", maxWidth: 420, maxHeight: "85vh", overflowY: "auto", borderRadius: "16px 16px 0 0", padding: "20px 20px 28px", fontFamily: "system-ui, sans-serif" }; }
 
-function DayDetailModal({ lang, date, occs, subjects, childName, onClose, onToggle, onRemove }) {
+function DayDetailModal({ lang, date, occs, subjects, childName, settings, onClose, onToggle, onRemove }) {
   const t = STRINGS[lang];
   return (
     <div style={overlay()}>
@@ -1252,6 +1319,7 @@ function DayDetailModal({ lang, date, occs, subjects, childName, onClose, onTogg
                 <div style={{ fontSize: 14, fontWeight: 500, textDecoration: cancelled ? "line-through" : "none" }}>
                   {occ.name}{cname && ` · ${cname}`}{occ.isExtra && `  ·  ${t.extraTag}`}{cancelled && `  ·  ${t.cancelledTag}`}{!cancelled && paid && !isMonthBilled && `  ·  ${t.paidTag}`}{partial && !isMonthBilled && `  ·  ${t.partialTag}`}
                 </div>
+                {occ.takenBy && <div style={{ fontSize: 11.5, color: "#6B6455", marginTop: 1 }}>🚗 {t.takenByTag(parentName(settings, lang, occ.takenBy))}</div>}
                 {occ.comment && <div style={{ fontSize: 12, color: "#9A8F72", marginTop: 1 }}>{occ.comment}</div>}
                 {isMonthBilled && <div style={{ fontSize: 11.5, color: "#9A8F72", marginTop: 1 }}>{t.billedMonthly}</div>}
               </div>
@@ -1391,8 +1459,9 @@ function PaymentHistoryModal({ lang, initialYear, onClose }) {
   );
 }
 
-function AccountModal({ lang, onClose }) {
+function AccountModal({ lang, settings, onSaveSettings, onClose }) {
   const t = STRINGS[lang];
+  const [pNames, setPNames] = useState([((settings && settings.parents) || [])[0] || "", ((settings && settings.parents) || [])[1] || ""]);
   const acc = (typeof window !== "undefined" && window.__account) || {};
   const [copied, setCopied] = useState(false);
   const [delStep, setDelStep] = useState(0); // 0 = hidden, 1 = confirm form
@@ -1460,6 +1529,12 @@ function AccountModal({ lang, onClose }) {
         </div>
         <p style={{ fontSize: 12, color: "#9A8F72", margin: "0 0 14px", lineHeight: 1.5 }}>{t.familyCodeHelp}</p>
         <p style={{ fontSize: 12, color: "#5C7A5F", margin: "0 0 18px" }}>{t.privacyNote}</p>
+        <p style={{ fontSize: 12, color: "#6B6455", margin: "4px 0 6px", fontWeight: 600 }}>{t.parentsTitle}</p>
+        {[0, 1].map((i) => (
+          <input key={i} type="text" value={pNames[i]} placeholder={t.parentNamePh(i + 1)} onChange={(e) => setPNames((p) => p.map((v, k) => (k === i ? e.target.value : v)))} onBlur={() => onSaveSettings && onSaveSettings({ parents: pNames.map((v) => v.trim()) })} style={{ ...fieldInput, marginBottom: 6 }} />
+        ))}
+        <p style={{ fontSize: 12, color: "#9A8F72", margin: "0 0 14px", lineHeight: 1.5 }}>{t.parentsHelp}</p>
+
         <button onClick={() => acc.signOut && acc.signOut()} style={{ ...primaryBtn, background: "#fff", color: "#20293A", border: "1px solid #DDD6C8" }}>{t.signOut}</button>
         {delStep === 0 ? (
           <button onClick={openDelete} style={{ ...primaryBtn, background: "none", color: "#B5533C", border: "none", fontSize: 13, marginTop: 14 }}>{t.deleteAccount}</button>
@@ -1505,7 +1580,7 @@ function ChildrenModal({ lang, children, onClose, onAdd, onDelete }) {
   );
 }
 
-function SubjectsModal({ lang, subjects, children, onClose, onSave, onDelete, onAddChild }) {
+function SubjectsModal({ lang, settings, subjects, children, onClose, onSave, onDelete, onAddChild }) {
   const t = STRINGS[lang];
   const [editing, setEditing] = useState(null);
   const [newTitle, setNewTitle] = useState("");
@@ -1531,7 +1606,7 @@ function SubjectsModal({ lang, subjects, children, onClose, onSave, onDelete, on
   }
 
   if (editing) {
-    return <SubjectForm lang={lang} subject={editing} children={children} onCancel={() => setEditing(null)} onSave={(s) => { onSave(s); setEditing(null); }} />;
+    return <SubjectForm lang={lang} settings={settings} subject={editing} children={children} onCancel={() => setEditing(null)} onSave={(s) => { onSave(s); setEditing(null); }} />;
   }
 
   const groups = children.map((c) => ({ child: c, items: subjects.filter((s) => s.childId === c.id) }));
@@ -1634,7 +1709,7 @@ function SubjectsModal({ lang, subjects, children, onClose, onSave, onDelete, on
   );
 }
 
-function SubjectForm({ lang, subject, children, onCancel, onSave }) {
+function SubjectForm({ lang, settings, subject, children, onCancel, onSave }) {
   const t = STRINGS[lang];
   const [name, setName] = useState(subject.name);
   const [cost, setCost] = useState(subject.cost);
@@ -1648,8 +1723,17 @@ function SubjectForm({ lang, subject, children, onCancel, onSave }) {
   const [newWeekday, setNewWeekday] = useState(1);
   const [newStart, setNewStart] = useState("17:00");
   const [newEnd, setNewEnd] = useState("18:00");
+  const [newTaker, setNewTaker] = useState("");
+  const takerOptions = (
+    <>
+      <option value="">{t.takerNone}</option>
+      <option value="p1">{parentName(settings, lang, "p1")}</option>
+      <option value="p2">{parentName(settings, lang, "p2")}</option>
+    </>
+  );
 
-  function addSlot() { setSlots([...slots, { id: uid(), weekday: Number(newWeekday), start: newStart, end: newEnd }]); }
+  function addSlot() { setSlots([...slots, { id: uid(), weekday: Number(newWeekday), start: newStart, end: newEnd, takenBy: newTaker }]); }
+  function setSlotTaker(id, v) { setSlots(slots.map((x) => (x.id === id ? { ...x, takenBy: v } : x))); }
   function removeSlot(id) { setSlots(slots.filter((s) => s.id !== id)); }
 
   return (
@@ -1705,11 +1789,16 @@ function SubjectForm({ lang, subject, children, onCancel, onSave }) {
             {slots.map((sl) => (
               <div key={sl.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 10px", background: "#F1ECDD", borderRadius: 6, marginBottom: 4 }}>
                 <span style={{ fontSize: 13 }}>{WEEKDAYS[lang][sl.weekday]} {sl.start}–{sl.end}</span>
-                <button onClick={() => removeSlot(sl.id)} style={iconBtn}><X size={14} /></button>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <select value={sl.takenBy || ""} onChange={(e) => setSlotTaker(sl.id, e.target.value)} aria-label={t.takerLabel} style={{ fontSize: 12, border: "1px solid #DDD6C8", borderRadius: 6, padding: "3px 4px", background: "#fff", color: "#20293A", maxWidth: 110 }}>{takerOptions}</select>
+                  <button onClick={() => removeSlot(sl.id)} style={iconBtn}><X size={14} /></button>
+                </span>
               </div>
             ))}
           </div>
         )}
+        <label style={{ ...fieldLabel, marginTop: 4 }}>{t.takerLabel}</label>
+        <select value={newTaker} onChange={(e) => setNewTaker(e.target.value)} style={{ ...fieldInput, marginBottom: 8 }}>{takerOptions}</select>
         <div style={{ display: "flex", gap: 6, alignItems: "flex-end" }}>
           <div style={{ flex: 1.3 }}>
             <label style={{ ...fieldLabel, marginTop: 0 }}>{t.dayLabel}</label>
@@ -1827,8 +1916,11 @@ function ExtraLessonModal({ lang, subjects, children, onClose, onSave }) {
   );
 }
 
-function StatsModal({ lang, subjects, childName, initialYear, onClose }) {
+function StatsModal({ lang, settings, onSaveSettings, subjects, childName, initialYear, onClose }) {
   const t = STRINGS[lang];
+  const [limitText, setLimitText] = useState(settings && settings.monthlyLimit ? String(settings.monthlyLimit) : "");
+  const nowD = new Date();
+  const limit = Number(String(limitText).replace(",", ".")) || 0;
   const [year, setYear] = useState(initialYear);
   const [monthTotals, setMonthTotals] = useState(null); // array of 12 {total}
   const [byCategory, setByCategory] = useState({});
@@ -1864,7 +1956,11 @@ function StatsModal({ lang, subjects, childName, initialYear, onClose }) {
   }, [year, subjects, lang]);
 
   const yearTotal = monthTotals ? monthTotals.reduce((a, b) => a + b, 0) : 0;
-  const maxMonth = monthTotals ? Math.max(1, ...monthTotals) : 1;
+  const maxMonth = monthTotals ? Math.max(1, limit, ...monthTotals) : 1;
+  const doneUpTo = year < nowD.getFullYear() ? 11 : year > nowD.getFullYear() ? -1 : nowD.getMonth();
+  const soFar = monthTotals ? monthTotals.slice(0, doneUpTo + 1).reduce((a, b) => a + b, 0) : 0;
+  const restOfYear = yearTotal - soFar;
+  const avgMonth = yearTotal / 12;
 
   return (
     <div style={overlay()}>
@@ -1889,12 +1985,25 @@ function StatsModal({ lang, subjects, childName, initialYear, onClose }) {
               <span style={{ fontSize: 24, fontWeight: 700, color: "#B5533C", fontVariantNumeric: "tabular-nums" }}>{fmtEUR(yearTotal, lang)}</span>
             </div>
 
+            {yearTotal > 0 && (
+              <div style={{ background: "#F7F5EF", border: "1px solid #E4DECC", borderRadius: 10, padding: "8px 12px", marginBottom: 12, fontSize: 12.5, color: "#33404F" }}>
+                {doneUpTo >= 0 && <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}><span>{t.fcSoFar}</span><b style={{ fontVariantNumeric: "tabular-nums" }}>{fmtEUR(soFar, lang)}</b></div>}
+                {doneUpTo < 11 && <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}><span>{t.fcRest}</span><b style={{ fontVariantNumeric: "tabular-nums" }}>{fmtEUR(restOfYear, lang)}</b></div>}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}><span>{t.fcAvg}</span><b style={{ fontVariantNumeric: "tabular-nums" }}>{fmtEUR(avgMonth, lang)}</b></div>
+              </div>
+            )}
+
+            <label style={{ ...fieldLabel, marginTop: 0 }}>{t.limitLabel}</label>
+            <input type="number" inputMode="decimal" min="0" step="1" value={limitText} onChange={(e) => setLimitText(e.target.value)} onBlur={() => onSaveSettings && onSaveSettings({ monthlyLimit: limit > 0 ? limit : 0 })} style={{ ...fieldInput, marginBottom: 4 }} />
+            <p style={{ fontSize: 11.5, color: "#9A8F72", margin: "0 0 12px", lineHeight: 1.5 }}>{t.limitHelp}</p>
+
             <div style={{ marginBottom: 16 }}>
               {monthTotals.map((total, m) => (
                 <div key={m} style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0" }}>
                   <span style={{ width: 34, fontSize: 12, color: "#6B6455" }}>{MONTHS_SHORT[lang][m]}</span>
-                  <div style={{ flex: 1, background: "#F1ECDD", borderRadius: 4, height: 10, overflow: "hidden" }}>
-                    <div style={{ width: `${(total / maxMonth) * 100}%`, background: "#8A7A57", height: "100%", borderRadius: 4 }} />
+                  <div style={{ flex: 1, background: "#F1ECDD", borderRadius: 4, height: 10, overflow: "hidden", position: "relative" }}>
+                    <div style={{ width: `${(total / maxMonth) * 100}%`, background: limit > 0 && total > limit + 0.005 ? "#B5533C" : m > doneUpTo ? "#CFC5A5" : "#8A7A57", height: "100%", borderRadius: 4 }} />
+                    {limit > 0 && <div title={t.fcLimitLine} style={{ position: "absolute", top: 0, bottom: 0, left: `${(limit / maxMonth) * 100}%`, width: 2, background: "#20293A" }} />}
                   </div>
                   <span style={{ width: 60, textAlign: "right", fontSize: 12.5, fontVariantNumeric: "tabular-nums", color: "#20293A" }}>{fmtEUR(total, lang)}</span>
                 </div>
