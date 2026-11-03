@@ -243,7 +243,7 @@ const STRINGS = {
     limitLabel: "Μηνιαίο όριο κόστους (€)", limitHelp: "Άφησέ το κενό αν δεν θέλεις όριο. Θα σε ειδοποιεί όταν ο μήνας το πλησιάζει ή το ξεπερνά.",
     limitOver: (c, l, d) => "Το κόστος του μήνα (" + c + ") ξεπερνά το όριό σου (" + l + ") κατά " + d + ".",
     limitNear: (c, l) => "Πλησιάζεις το όριο του μήνα: " + c + " από " + l + ".",
-    fcSoFar: "Μέχρι και αυτόν τον μήνα", fcRest: "Υπόλοιπο έτους (πρόβλεψη)", fcAvg: "Μέσος όρος μήνα", fcLimitLine: "όριο",
+    fcSoFar: "Μέχρι και αυτόν τον μήνα", fcRest: "Υπόλοιπο έτους (πρόβλεψη)", fcAvg: "Μέσος όρος μήνα (μήνες με δραστηριότητες)", fcLimitLine: "όριο",
     extraLinkTo: "Σύνδεση με", extraOther: "Άλλο…",
     extraNamePlaceholder: "π.χ. Χημεία",
     dateLabel: "Ημερομηνία", costLabel: "Κόστος (€)",
@@ -361,7 +361,7 @@ const STRINGS = {
     limitLabel: "Monthly cost limit (€)", limitHelp: "Leave empty for no limit. You'll be warned when a month gets close to it or goes over.",
     limitOver: (c, l, d) => "This month's cost (" + c + ") is over your limit (" + l + ") by " + d + ".",
     limitNear: (c, l) => "You're close to this month's limit: " + c + " of " + l + ".",
-    fcSoFar: "Up to and including this month", fcRest: "Rest of the year (forecast)", fcAvg: "Monthly average", fcLimitLine: "limit",
+    fcSoFar: "Up to and including this month", fcRest: "Rest of the year (forecast)", fcAvg: "Monthly average (months with activities)", fcLimitLine: "limit",
     extraLinkTo: "Link to", extraOther: "Other…",
     extraNamePlaceholder: "e.g. Chemistry",
     dateLabel: "Date", costLabel: "Cost (€)",
@@ -1960,7 +1960,8 @@ function StatsModal({ lang, settings, onSaveSettings, subjects, childName, initi
   const doneUpTo = year < nowD.getFullYear() ? 11 : year > nowD.getFullYear() ? -1 : nowD.getMonth();
   const soFar = monthTotals ? monthTotals.slice(0, doneUpTo + 1).reduce((a, b) => a + b, 0) : 0;
   const restOfYear = yearTotal - soFar;
-  const avgMonth = yearTotal / 12;
+  const activeMonths = monthTotals ? monthTotals.filter((v) => v > 0.005).length : 0;
+  const avgMonth = activeMonths ? yearTotal / activeMonths : 0;
 
   return (
     <div style={overlay()}>
