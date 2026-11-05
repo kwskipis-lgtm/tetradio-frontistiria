@@ -98,7 +98,7 @@ const Trash2 = (p) => <IconBase {...p}><polyline points="3 6 5 6 21 6" /><path d
 const Pencil = (p) => <IconBase {...p}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></IconBase>;
 const BarChart3 = (p) => <IconBase {...p}><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></IconBase>;
 const UserIcon = (p) => <IconBase {...p}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></IconBase>;
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useRef } = React;
 
 
 
@@ -201,6 +201,7 @@ const STRINGS = {
     signOut: "Αποσύνδεση",
     tapHint: "Πάτα σε μια ημέρα του ημερολογίου για να ακυρώσεις ή να εξοφλήσεις ένα συγκεκριμένο μάθημα.",
     saveFail: "Η αποθήκευση απέτυχε. Δοκίμασε ξανά.",
+    nameRequired: "Γράψε πρώτα το όνομα της δραστηριότητας (πάνω-πάνω στη φόρμα).", costInvalid: "Βάλε ένα έγκυρο κόστος.",
     extraTag: "έκτακτο", cancelledTag: "ακυρώθηκε", paidTag: "εξοφλήθηκε", partialTag: "μερική εξόφληση",
     billedMonthly: "χρεώνεται μηνιαία",
     fullSettle: "Πλήρης εξόφληση", undoPayment: "Αναίρεση πληρωμής",
@@ -319,6 +320,7 @@ const STRINGS = {
     signOut: "Sign out",
     tapHint: "Tap a day on the calendar to cancel or settle a specific lesson.",
     saveFail: "Save failed. Please try again.",
+    nameRequired: "Enter the activity name first (at the top of the form).", costInvalid: "Enter a valid cost.",
     extraTag: "extra", cancelledTag: "cancelled", paidTag: "paid", partialTag: "partial payment",
     billedMonthly: "billed monthly",
     fullSettle: "Mark as paid", undoPayment: "Undo payment",
@@ -679,6 +681,7 @@ function TutoringLedger() {
   const [filterChild, setFilterChild] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [loadedGlobals, setLoadedGlobals] = useState(false);
   const [error, setError] = useState("");
   const [lang, setLang] = useState(() => {
     try { return localStorage.getItem("altis_lang") || "el"; } catch (e) { return "el"; }
@@ -714,6 +717,7 @@ function TutoringLedger() {
       const st = await window.storage.get("settings", true);
       setSettings({ ...DEFAULT_SETTINGS, ...(st && st.value ? JSON.parse(st.value) : {}) });
     } catch (e) {}
+    setLoadedGlobals(true);
   }
   async function saveSettings(patch) {
     let current = settings;
@@ -744,6 +748,15 @@ function TutoringLedger() {
   }
 
   useEffect(() => { loadGlobals(); }, []);
+  // Anonymous usage counters (numbers only, never names or amounts). See the privacy policy.
+  useEffect(() => {
+    if (IS_DEMO || !loadedGlobals || !window.__account || !window.__account.uid) return;
+    try {
+      db.collection("app_stats").doc(window.__account.uid)
+        .set({ children: children.length, subjects: subjects.length, lastActive: Date.now() }, { merge: true })
+        .catch(() => {});
+    } catch (e) {}
+  }, [loadedGlobals, children.length, subjects.length]);
   useEffect(() => { setLoading(true); loadMonth().finally(() => setLoading(false)); }, [key]);
 
   // ---- Fetch-then-mutate-then-write helpers. Always work off the freshest stored data
@@ -1241,7 +1254,7 @@ function TutoringLedger() {
           </>
         )}
 
-        {error && <p style={{ fontFamily: "system-ui, sans-serif", fontSize: 12, color: "#B5533C", marginTop: 12 }}>{error}</p>}
+        {error && <div role="alert" style={{ position: "fixed", top: 10, left: 10, right: 10, zIndex: 500, background: "#F8E7E1", border: "1px solid #E5B8AA", color: "#8A3A28", borderRadius: 10, padding: "10px 14px", fontFamily: "system-ui, sans-serif", fontSize: 13, fontWeight: 600, textAlign: "center" }} onClick={() => setError("")}>{error}</div>}
       </div>
 
       {activeDay && (
@@ -1502,6 +1515,7 @@ function AccountModal({ lang, settings, onSaveSettings, onClose }) {
       } else {
         await famRef.update({ members: firebase.firestore.FieldValue.arrayRemove(u.uid) });
       }
+      try { await db.collection("app_stats").doc(u.uid).delete(); } catch (e2) {}
       await db.collection("app_users").doc(u.uid).delete();
       await u.delete();
     } catch (e) {
@@ -1724,6 +1738,8 @@ function SubjectForm({ lang, settings, subject, children, onCancel, onSave }) {
   const [newStart, setNewStart] = useState("17:00");
   const [newEnd, setNewEnd] = useState("18:00");
   const [newTaker, setNewTaker] = useState("");
+  const [formError, setFormError] = useState("");
+  const nameRef = useRef(null);
   const takerOptions = (
     <>
       <option value="">{t.takerNone}</option>
@@ -1745,7 +1761,7 @@ function SubjectForm({ lang, settings, subject, children, onCancel, onSave }) {
         </div>
 
         <label style={fieldLabel}>{t.nameLabel}</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={fieldInput} placeholder={t.namePlaceholder} />
+        <input ref={nameRef} type="text" value={name} onChange={(e) => { setName(e.target.value); setFormError(""); }} style={{ ...fieldInput, ...(formError && !name.trim() ? { borderColor: "#B5533C" } : {}) }} placeholder={t.namePlaceholder} />
 
         <CategoryPicker lang={lang} value={category} onChange={setCategory} />
 
@@ -1823,8 +1839,14 @@ function SubjectForm({ lang, settings, subject, children, onCancel, onSave }) {
         </select>
         <p style={{ fontSize: 11.5, color: "#9A8F72", margin: "5px 0 0", lineHeight: 1.5 }}>{t.reminderHelp}</p>
 
+        {formError && <p style={{ fontSize: 13, color: "#B5533C", margin: "12px 0 0", fontWeight: 600 }}>{formError}</p>}
         <button
-          onClick={() => name.trim() && onSave({ id: subject.id, name: name.trim(), cost: Number(cost), billing, category, childId: childId || null, startDate: startDate || "", endDate: endDate || "", slots, reminderMinutes: reminder, ...(subject.createdAt ? { createdAt: subject.createdAt } : (!subject.name ? { createdAt: Date.now() } : {})) })}
+          onClick={() => {
+            if (!name.trim()) { setFormError(t.nameRequired); try { nameRef.current && nameRef.current.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {} return; }
+            if (!(Number(cost) >= 0) || String(cost).trim() === "") { setFormError(t.costInvalid); return; }
+            setFormError("");
+            onSave({ id: subject.id, name: name.trim(), cost: Number(cost), billing, category, childId: childId || null, startDate: startDate || "", endDate: endDate || "", slots, reminderMinutes: reminder, ...(subject.createdAt ? { createdAt: subject.createdAt } : (!subject.name ? { createdAt: Date.now() } : {})) });
+          }}
           style={primaryBtn}
         >
           {t.save}
@@ -2486,7 +2508,7 @@ function AppGate() {
   if (!familyId) return <FamilySetupScreen user={user} onResolved={setFamilyId} />;
 
   window.__familyCollectionRef = db.collection("app_families").doc(familyId).collection("data");
-  window.__account = { email: user.email || "", familyId, signOut: () => firebase.auth().signOut() };
+  window.__account = { email: user.email || "", uid: user.uid, familyId, signOut: () => firebase.auth().signOut() };
   return <AppWithTools user={user} />;
 }
 
@@ -2496,11 +2518,95 @@ function AppWithTools({ user }) {
   const wantsImport = urlParams.get("import") === "1";
   const [showImport, setShowImport] = useState(wantsImport);
   const [reloadKey, setReloadKey] = useState(0);
+  const isOwner = user.email === "kwskipis@gmail.com" && !!user.emailVerified;
+  const [showAdmin, setShowAdmin] = useState(urlParams.get("admin") === "1" && isOwner);
+  useEffect(() => {
+    if (IS_DEMO) return;
+    try {
+      let firstOfSession = true;
+      try { firstOfSession = !sessionStorage.getItem("altis_seen"); sessionStorage.setItem("altis_seen", "1"); } catch (e) {}
+      const created = user.metadata && user.metadata.creationTime ? Date.parse(user.metadata.creationTime) : Date.now();
+      let lg = "el"; try { lg = localStorage.getItem("altis_lang") === "en" ? "en" : "el"; } catch (e) {}
+      const data = { createdAt: created, lastSeen: Date.now(), familyId: (window.__account && window.__account.familyId) || "", lang: lg };
+      if (firstOfSession) data.visits = firebase.firestore.FieldValue.increment(1);
+      db.collection("app_stats").doc(user.uid).set(data, { merge: true }).catch(() => {});
+    } catch (e) {}
+  }, [user.uid]);
   return (
     <>
       <TutoringLedger key={reloadKey} />
+      {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
       {showImport && <ImportOldData user={user} onClose={() => setShowImport(false)} onImported={() => setReloadKey((k) => k + 1)} />}
     </>
+  );
+}
+
+function AdminPanel({ onClose }) {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState("");
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    setErr("");
+    db.collection("app_stats").get()
+      .then((snap) => setRows(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .catch((e) => setErr(e && e.code === "permission-denied" ? "Δεν επιτρέπεται η ανάγνωση. Έχεις δημοσιεύσει τους νέους κανόνες Firestore (με το app_stats);" : "Δεν φορτώθηκαν τα στατιστικά."));
+  }, [tick]);
+  const now = Date.now(), DAY = 86400000;
+  const list = (rows || []).slice().sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+  const fams = new Set(list.map((r) => r.familyId).filter(Boolean));
+  const act = (d) => list.filter((r) => r.lastSeen && now - r.lastSeen <= d * DAY).length;
+  const activated = list.filter((r) => (r.subjects || 0) > 0).length;
+  const fmt = (ts) => (ts ? new Date(ts).toLocaleDateString("el-GR", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "–");
+  const ago = (ts) => { if (!ts) return "–"; const d = Math.floor((now - ts) / DAY); return d <= 0 ? "σήμερα" : d === 1 ? "χθες" : d + " μέρες πριν"; };
+  const tile = (label, v) => (
+    <div style={{ background: "#F7F5EF", border: "1px solid #E4DECC", borderRadius: 10, padding: "10px 12px" }}>
+      <div style={{ fontSize: 22, fontWeight: 700, color: "#20293A", fontVariantNumeric: "tabular-nums" }}>{v}</div>
+      <div style={{ fontSize: 11.5, color: "#6B6455" }}>{label}</div>
+    </div>
+  );
+  const th = { textAlign: "left", fontSize: 11, color: "#8A7A57", padding: "4px 6px", fontWeight: 700, whiteSpace: "nowrap" };
+  const td = { fontSize: 12.5, padding: "5px 6px", borderTop: "1px solid #EEE8D6", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(32,41,58,0.55)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }}>
+      <div style={{ background: "#FFFDF8", borderRadius: 14, maxWidth: 720, width: "100%", maxHeight: "92vh", overflowY: "auto", padding: 16, fontFamily: "system-ui, sans-serif" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <h2 style={{ margin: 0, fontSize: 17, color: "#20293A" }}>Χρήση της Altis</h2>
+          <span style={{ display: "flex", gap: 4 }}>
+            <button onClick={() => setTick((n) => n + 1)} style={iconBtn} title="Ανανέωση"><RefreshCw size={17} /></button>
+            <button onClick={onClose} style={iconBtn}><X size={18} /></button>
+          </span>
+        </div>
+        <p style={{ fontSize: 12, color: "#6B6455", margin: "0 0 12px", lineHeight: 1.5 }}>Μόνο αριθμοί χρήσης. Δεν εμφανίζονται email, ονόματα παιδιών, μαθήματα ή ποσά.</p>
+        {err && <p style={{ color: "#B5533C", fontSize: 13 }}>{err}</p>}
+        {!rows && !err && <p style={{ fontSize: 13, color: "#6B6455" }}>Φόρτωση…</p>}
+        {rows && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8, marginBottom: 14 }}>
+              {tile("Χρήστες", list.length)}
+              {tile("Οικογένειες", fams.size)}
+              {tile("Ενεργοί 7 ημερών", act(7))}
+              {tile("Ενεργοί 30 ημερών", act(30))}
+              {tile("Έχουν καταχωρήσει δραστηριότητα", activated)}
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                <thead><tr>
+                  <th style={th}>Χρήστης</th><th style={th}>Εγγραφή</th><th style={th}>Τελευταία φορά</th><th style={th}>Επισκέψεις</th><th style={th}>Οικογένεια</th><th style={th}>Παιδιά</th><th style={th}>Δραστ.</th><th style={th}>Γλώσσα</th>
+                </tr></thead>
+                <tbody>
+                  {list.map((r) => (
+                    <tr key={r.id}>
+                      <td style={td}>{r.id.slice(0, 6)}</td><td style={td}>{fmt(r.createdAt)}</td><td style={td}>{ago(r.lastSeen)}</td><td style={td}>{r.visits || 0}</td><td style={td}>{r.familyId || "–"}</td><td style={td}>{r.children || 0}</td><td style={td}>{r.subjects || 0}</td><td style={td}>{(r.lang || "el").toUpperCase()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {list.length === 0 && <p style={{ fontSize: 13, color: "#6B6455" }}>Δεν υπάρχουν ακόμα δεδομένα. Εμφανίζονται όσο συνδέονται χρήστες με τη νέα έκδοση.</p>}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
