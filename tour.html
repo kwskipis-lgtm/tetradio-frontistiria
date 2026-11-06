@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="icon" href="icon-192.png" type="image/png"><meta name="theme-color" content="#121826"></head><body>
+<title>Περιήγηση στο Altis</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one centred column. Video stage first, language switch on its edge, chapters below as a real sequence. */
+:root {
+  --bg: #121826; --surface: #1b2335; --fg: #f0ede5; --muted: #a2a5b0; --accent: #d9a15f; --line: #2b3550; --stage: #1d2536;
+  --display: "Newsreader", Georgia, "Times New Roman", serif;
+  --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --bg: #eceef3; --surface: #ffffff; --fg: #1a2133; --muted: #5a6275; --accent: #94601f; --line: #d3d8e3; color-scheme: light; }
+}
+:root[data-theme="light"] { --bg: #eceef3; --surface: #ffffff; --fg: #1a2133; --muted: #5a6275; --accent: #94601f; --line: #d3d8e3; color-scheme: light; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: clamp(28px, 5vw, 40px); line-height: 1.1; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { margin: 6px 0 0; color: var(--muted); max-width: 52ch; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 3px; background: var(--surface); gap: 2px; }
+.seg button { font: 600 13px/1 var(--body); letter-spacing: .04em; color: var(--muted); background: none; border: 0; border-radius: 7px; padding: 9px 14px; cursor: pointer; min-width: 52px; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+[hidden] { display: none !important; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seglabel { display: block; font: 600 11px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; text-align: right; }
+.stage { position: relative; aspect-ratio: 16 / 9; background: var(--stage); border-radius: 14px; overflow: hidden; container-type: inline-size; max-width: 100%; }
+.stage video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: var(--stage); }
+.title-over { position: absolute; left: 48.96%; top: 52.8%; width: 40%; font: 700 4.06cqw/1.12 var(--body); color: #f7f5ef; transition: opacity .35s; pointer-events: none; text-wrap: balance; }
+.cap-over { position: absolute; left: 50%; bottom: 2.4cqw; transform: translateX(-50%); max-width: 74%; text-align: center; font: 500 2.29cqw/1.3 var(--body); color: #fff; background: rgba(10, 14, 20, .74); padding: .5cqw 1.4cqw; border-radius: .6cqw; transition: opacity .2s; pointer-events: none; }
+.cap-below { display: none; }
+.bigplay { position: absolute; inset: 0; display: grid; place-items: center; background: linear-gradient(0deg, rgba(10,14,20,.30), rgba(10,14,20,.30)); border: 0; cursor: pointer; padding: 0; }
+.bigplay span { width: 84px; height: 84px; border-radius: 50%; background: var(--accent); color: #141a27; display: grid; place-items: center; }
+.bigplay svg { width: 34px; height: 34px; margin-left: 4px; }
+.bar { display: flex; align-items: center; gap: 12px; padding: 4px 2px; }
+.ib { background: var(--surface); border: 1px solid var(--line); color: var(--fg); width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; cursor: pointer; flex: none; padding: 0; }
+.ib svg { width: 20px; height: 20px; }
+.time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; flex: none; min-width: 5.6em; text-align: center; }
+input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); height: 28px; cursor: pointer; }
+.cap-below, .chap-h { margin: 0; }
+.chap-h { font: 600 11px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+ol.chapters { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; counter-reset: c; }
+ol.chapters li { min-width: 0; }
+.ch { width: 100%; display: flex; align-items: baseline; gap: 12px; text-align: left; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; font: 500 14px/1.3 var(--body); cursor: pointer; }
+.ch .n { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; flex: none; width: 2.2em; }
+.ch .t { flex: 1; min-width: 0; }
+.ch .m { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; flex: none; }
+.ch[aria-current="true"] { border-color: var(--accent); }
+.ch[aria-current="true"] .n { color: var(--accent); font-weight: 700; }
+.note { color: var(--muted); font-size: 13px; margin: 0; }
+.stage video { object-fit: contain; }
+.stage.portrait { aspect-ratio: 9 / 16; width: min(100%, calc(82vh * 9 / 16)); margin-inline: auto; }
+.stage.portrait .title-over { left: 0; right: 0; top: 2.4cqw; width: auto; text-align: center; font: 700 3.4cqw/1.2 var(--body); letter-spacing: .08em; text-transform: uppercase; color: #b58450; }
+.stage.portrait .cap-over { bottom: 5cqw; max-width: 90%; width: 90%; font: 600 4.6cqw/1.3 var(--body); background: none; padding: 0; text-shadow: 0 1px 4px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.9); }
+.stage:fullscreen { aspect-ratio: auto; max-height: none; width: 100vw; height: 100vh; border-radius: 0; background: #1d2536; }
+@media (max-width: 700px) {
+  .stage.portrait { width: min(100%, calc(76vh * 9 / 16)); }
+  .seglabel { text-align: left; }
+  .time { min-width: 4.8em; }
+}
+@media (prefers-reduced-motion: reduce) { .title-over, .cap-over { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1 data-i="title"></h1>
+      <p class="lede" data-i="lede"></p>
+    </div>
+    <div>
+      <span class="seglabel" data-i="subs"></span>
+      <div class="seg" role="group" id="seg">
+        <button type="button" data-s="el" id="b-el">ΕΛ</button>
+        <button type="button" data-s="en" id="b-en">EN</button>
+        <button type="button" data-s="off" id="b-off" data-i="off"></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="stage" id="stage">
+    <video id="v" poster="poster.jpg" playsinline preload="metadata"></video>
+    <div class="title-over" id="tover" aria-hidden="true"></div>
+    <div class="cap-over" id="cover" aria-live="off" hidden></div>
+    <button type="button" class="bigplay" id="big" data-ia="play"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button>
+  </div>
+
+  <div class="cap-below" id="below" aria-live="polite"><b id="bt"></b><p id="bp"></p></div>
+
+  <div class="bar">
+    <button type="button" class="ib" id="pp" data-ia="play"><svg id="ico-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg id="ico-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
+    <span class="time" id="time">0:00 / 0:00</span>
+    <input type="range" id="seek" min="0" max="248" step="0.1" value="0" data-ia="seek">
+    <button type="button" class="ib" id="mute" data-ia="sound"><svg id="ico-snd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><svg id="ico-mut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 5 6M21 9l-5 6"/></svg></button>
+    <button type="button" class="ib" id="fs" data-ia="full"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
+
+  <section>
+    <p class="chap-h" data-i="chapters"></p>
+    <ol class="chapters" id="chapters"></ol>
+  </section>
+  <p class="note" data-i="note"></p>
+</div>
+
+<script>
+const D = {"total": 248.0, "cues": [{"s": 0.6, "e": 4.6, "el": "Καλώς ήρθες στο Altis, το τετράδιο φροντιστηρίων της οικογένειας.", "en": "Welcome to Altis, your family's notebook for lessons and activities."}, {"s": 4.9, "e": 9.2, "el": "Φτιάξε τον λογαριασμό σου με email και κωδικό.", "en": "Create your account with an email and a password."}, {"s": 9.6, "e": 14.2, "el": "Τα δεδομένα σου είναι ιδιωτικά και τα βλέπει μόνο η οικογένειά σου.", "en": "Your data is private. Only your family can see it."}, {"s": 15.4, "e": 19.8, "el": "Δημιούργησε την οικογένειά σου. Έχει δικά της, χωριστά δεδομένα.", "en": "Create your family. Every family has its own, separate data."}, {"s": 20.2, "e": 24.67, "el": "Θα πάρεις κωδικό. Δώσ' τον στον/στη σύζυγο, για να βλέπετε τα ίδια δεδομένα.", "en": "You get a family code. Share it with your partner to see the same data."}, {"s": 25.0, "e": 29.3, "el": "Μέχρι δύο γονείς ανά οικογένεια, με δικό τους email ο καθένας.", "en": "Up to two parents per family, each with their own email."}, {"s": 30.4, "e": 35.0, "el": "Αρχική οθόνη. Δύο απλά βήματα: ένα παιδί και τα μαθήματά του.", "en": "Your home screen. Two simple steps: add a child, then their activities."}, {"s": 35.4, "e": 39.8, "el": "Από κάτω βλέπεις το ημερολόγιο, που θα γεμίσει με το πρόγραμμα του μήνα.", "en": "Below it sits the calendar, which fills with the month's schedule."}, {"s": 40.2, "e": 44.3, "el": "Στην κορυφή: γλώσσα, στατιστικά, παιδιά, μαθήματα και λογαριασμός.", "en": "At the top: language, statistics, children, activities and account."}, {"s": 45.4, "e": 49.6, "el": "Πρώτο βήμα: πρόσθεσε τα παιδιά, με το όνομά τους.", "en": "Step one: add your children by name."}, {"s": 50.0, "e": 54.4, "el": "Κάθε παιδί έχει το δικό του πρόγραμμα μαθημάτων και δραστηριοτήτων.", "en": "Each child has their own schedule of lessons and activities."}, {"s": 58.4, "e": 62.75, "el": "Δεύτερο βήμα: πάτα το + δίπλα στο όνομα του παιδιού για νέα δραστηριότητα.", "en": "Step two: tap the + next to a child's name to add an activity."}, {"s": 63.0, "e": 67.4, "el": "Γράψε τι είναι και διάλεξε κατηγορία. Κάθε κατηγορία έχει σύντομη εξήγηση.", "en": "Name it and pick a category. Each category comes with a short explanation."}, {"s": 67.8, "e": 72.4, "el": "Οι κατηγορίες βοηθούν τα στατιστικά: βλέπεις πόσα ξοδεύεις για κάθε είδος.", "en": "Categories feed the statistics, so you see what you spend on each kind."}, {"s": 72.8, "e": 77.6, "el": "Διάλεξε πώς πληρώνεις: ανά μάθημα ή σταθερό ποσό τον μήνα.", "en": "Choose how you pay: per lesson, or a flat monthly fee."}, {"s": 78.0, "e": 83.0, "el": "Πρόσθεσε τις μέρες και τις ώρες. Θα μπουν αυτόματα στο ημερολόγιο κάθε εβδομάδα.", "en": "Add the days and times. They appear on the calendar automatically, every week."}, {"s": 83.4, "e": 88.6, "el": "Και ρύθμισε υπενθύμιση, π.χ. 30 λεπτά πριν, ξεχωριστά για κάθε δραστηριότητα.", "en": "Then set a reminder, e.g. 30 minutes before, separately for each activity."}, {"s": 89.0, "e": 93.0, "el": "Αποθήκευση, και η δραστηριότητα μπαίνει στο πρόγραμμα.", "en": "Save, and the activity joins the schedule."}, {"s": 94.4, "e": 98.6, "el": "Το πρόγραμμα εμφανίζεται αμέσως στο ημερολόγιο του μήνα.", "en": "The schedule appears right away on the month calendar."}, {"s": 99.6, "e": 104.19, "el": "Κάθε δραστηριότητα έχει το δικό της χρώμα. Εδώ είναι τέσσερις, για δύο παιδιά.", "en": "Every activity has its own colour. Here are four, for two children."}, {"s": 104.4, "e": 108.8, "el": "Φίλτραρε ανά παιδί ή ανά κατηγορία, για να δεις μόνο ό,τι σε ενδιαφέρει.", "en": "Filter by child or category to see only what matters to you."}, {"s": 109.2, "e": 113.85, "el": "Πάτα σε μια μέρα για να δεις τα μαθήματά της, να ακυρώσεις ή να εξοφλήσεις ένα.", "en": "Tap a day to see its lessons, cancel one, or mark it as paid."}, {"s": 114.4, "e": 118.2, "el": "Ένα μάθημα που ακυρώθηκε δεν χρεώνεται.", "en": "A cancelled lesson is not charged."}, {"s": 119.4, "e": 123.6, "el": "Εδώ βλέπεις πόσα οφείλεις αυτόν τον μήνα, για κάθε δραστηριότητα.", "en": "Here is how much you owe this month, for each activity."}, {"s": 124.0, "e": 128.6, "el": "Πάτα το ποσό για να εξοφλήσεις: ολόκληρο το ποσό ή ένα μέρος του.", "en": "Tap the amount to pay: all of it, or just a part."}, {"s": 129.0, "e": 133.6, "el": "Ό,τι μένει παραμένει οφειλόμενο και το εξοφλείς αργότερα.", "en": "Whatever is left stays due, and you settle it later."}, {"s": 134.0, "e": 137.3, "el": "Έγινε λάθος; Η αναίρεση πληρωμής είναι ένα πάτημα.", "en": "Made a mistake? Undoing a payment takes one tap."}, {"s": 138.4, "e": 143.0, "el": "Το Altis θυμάται ό,τι δεν έχεις εξοφλήσει από τους προηγούμενους μήνες.", "en": "Altis remembers what is still unpaid from previous months."}, {"s": 143.4, "e": 148.0, "el": "Πάτα σε έναν μήνα για να πας εκεί και να τον εξοφλήσεις.", "en": "Tap a month to jump there and settle it."}, {"s": 148.6, "e": 153.2, "el": "Και στο τέλος βλέπεις το γενικό σύνολο οφειλής.", "en": "And at the bottom you see the grand total owed."}, {"s": 154.4, "e": 159.05, "el": "Μια έκτακτη δραστηριότητα ή αναπλήρωση; Πρόσθεσέ την για μία συγκεκριμένη μέρα.", "en": "An extra activity or a make-up lesson? Add it for one specific day."}, {"s": 159.4, "e": 164.6, "el": "Τη συνδέεις με υπάρχουσα δραστηριότητα και γράφεις σχόλιο.", "en": "Link it to an existing activity and add a note."}, {"s": 166.4, "e": 170.8, "el": "Στο ιστορικό πληρωμών βρίσκεις κάθε πληρωμή που σημείωσες, με ημερομηνία.", "en": "The payment history lists every payment you recorded, with its date."}, {"s": 171.2, "e": 175.6, "el": "Δες το καθαρό σύνολο του έτους και γύρνα σε παλιότερες χρονιές.", "en": "See the year's net total and go back to earlier years."}, {"s": 176.0, "e": 180.3, "el": "Εξαγωγή σε Excel με ένα πάτημα, για τον λογιστή ή το προσωπικό σου αρχείο.", "en": "Export to Excel in one tap, for your accountant or your own records."}, {"s": 181.4, "e": 185.8, "el": "Τα στατιστικά δείχνουν πόσο κοστίζουν οι δραστηριότητες, μήνα με μήνα.", "en": "Statistics show what your activities cost, month by month."}, {"s": 186.2, "e": 190.6, "el": "Και πόσα πάνε σε κάθε κατηγορία και σε κάθε παιδί.", "en": "And how much goes to each category and to each child."}, {"s": 191.0, "e": 194.3, "el": "Το σύνολο του έτους, με μια ματιά.", "en": "The year's total at a glance."}, {"s": 195.4, "e": 199.8, "el": "Οι υπενθυμίσεις σε ειδοποιούν πριν από κάθε μάθημα, με ήχο στο κινητό.", "en": "Reminders alert you before each lesson, with a sound on your phone."}, {"s": 200.2, "e": 204.8, "el": "Κάθε δραστηριότητα έχει δική της ώρα: π.χ. 30 λεπτά ή 1 ώρα πριν.", "en": "Each activity has its own lead time: e.g. 30 minutes or 1 hour before."}, {"s": 205.2, "e": 210.2, "el": "Πάτα «Εξαγωγή υπενθυμίσεων» και άνοιξε το αρχείο με το Ημερολόγιο του κινητού σου.", "en": "Tap \"Export reminders\" and open the file with your phone's calendar."}, {"s": 210.6, "e": 215.2, "el": "Η ειδοποίηση χτυπά από το ημερολόγιο, ακόμα κι αν η εφαρμογή είναι κλειστή.", "en": "The alerts ring from your calendar, even when the app is closed."}, {"s": 216.4, "e": 220.28, "el": "Το Altis μιλάει ελληνικά και αγγλικά. Άλλαξε γλώσσα με ένα πάτημα.", "en": "Altis speaks Greek and English. Switch language with one tap."}, {"s": 220.6, "e": 224.6, "el": "Η ίδια εφαρμογή, στη γλώσσα που προτιμάς.", "en": "The same app, in the language you prefer."}, {"s": 225.2, "e": 229.8, "el": "Ο λογαριασμός έχει τον κωδικό οικογένειας, για να προσκαλέσεις τον/τη σύζυγο.", "en": "Your account holds the family code, to invite your partner."}, {"s": 230.2, "e": 234.3, "el": "Μπορείς να διαγράψεις τον λογαριασμό και τα δεδομένα σου όποτε θέλεις.", "en": "You can delete your account and your data whenever you wish."}, {"s": 235.4, "e": 239.6, "el": "Altis: το πρόγραμμα και το κόστος των παιδιών σε ένα μέρος.", "en": "Altis: your children's schedule and costs in one place."}, {"s": 240.0, "e": 244.0, "el": "Ιδιωτικό, απλό και πάντα μαζί σου.", "en": "Private, simple, and always with you."}, {"s": 244.4, "e": 247.3, "el": "Δοκίμασέ το σήμερα.", "en": "Try it today."}], "scenes": [{"id": "login", "s": 0.0, "e": 15.0, "el": "Σύνδεση", "en": "Sign in", "n": 1}, {"id": "family", "s": 15.0, "e": 30.0, "el": "Η οικογένειά σου", "en": "Your family", "n": 2}, {"id": "welcome", "s": 30.0, "e": 45.0, "el": "Αρχική οθόνη", "en": "Home screen", "n": 3}, {"id": "children", "s": 45.0, "e": 58.0, "el": "Πρόσθεσε τα παιδιά", "en": "Add your children", "n": 4}, {"id": "activity", "s": 58.0, "e": 94.0, "el": "Μαθήματα & δραστηριότητες", "en": "Lessons & activities", "n": 5}, {"id": "calendar", "s": 94.0, "e": 119.0, "el": "Ημερολόγιο", "en": "Calendar", "n": 6}, {"id": "pay", "s": 119.0, "e": 138.0, "el": "Πληρωμές", "en": "Payments", "n": 7}, {"id": "carry", "s": 138.0, "e": 154.0, "el": "Προηγούμενοι μήνες", "en": "Previous months", "n": 8}, {"id": "extra", "s": 154.0, "e": 166.0, "el": "Έκτακτη δραστηριότητα", "en": "Extra activity", "n": 9}, {"id": "history", "s": 166.0, "e": 181.0, "el": "Ιστορικό & Excel", "en": "History & Excel", "n": 10}, {"id": "stats", "s": 181.0, "e": 195.0, "el": "Στατιστικά", "en": "Statistics", "n": 11}, {"id": "reminders", "s": 195.0, "e": 216.0, "el": "Υπενθυμίσεις", "en": "Reminders", "n": 12}, {"id": "account", "s": 216.0, "e": 235.0, "el": "Γλώσσα & λογαριασμός", "en": "Language & account", "n": 13}, {"id": "outro", "s": 235.0, "e": 248.0, "el": "Altis", "en": "Altis", "n": 14}]};
+const UI = {
+  el: { title: "Περιήγηση στο Altis", lede: "Πώς δουλεύει η εφαρμογή, βήμα βήμα. Με ήρεμη μουσική και υπότιτλους στα ελληνικά και στα αγγλικά.", subs: "Υπότιτλοι", off: "Χωρίς", chapters: "Κεφάλαια", note: "Ο ήχος ξεκινά όταν πατήσεις αναπαραγωγή. Η αλλαγή γλώσσας γίνεται οποιαδήποτε στιγμή, χωρίς διακοπή.",
+        play: "Αναπαραγωγή", pause: "Παύση", seek: "Θέση στο βίντεο", sound: "Ήχος", full: "Πλήρης οθόνη" },
+  en: { title: "Altis tour", lede: "How the app works, step by step. With calm music and subtitles in Greek and English.", subs: "Subtitles", off: "Off", chapters: "Chapters", note: "Sound starts when you press play. You can switch language at any moment, without interrupting the video.",
+        play: "Play", pause: "Pause", seek: "Position in the video", sound: "Sound", full: "Full screen" },
+};
+const $ = (s) => document.querySelector(s);
+const v = $("#v");
+let sub = "el", ui = "el";
+try { const s = localStorage.getItem("altis-tour-sub"); if (s === "el" || s === "en" || s === "off") { sub = s; if (s !== "off") ui = s; } else if (!/^el/i.test(navigator.language || "")) { sub = "en"; ui = "en"; } } catch (e) { if (!/^el/i.test(navigator.language || "")) { sub = "en"; ui = "en"; } }
+const mmss = (t) => { t = Math.max(0, Math.floor(t)); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); };
+const sceneAt = (t) => { let k = 0; D.scenes.forEach((s, i) => { if (t >= s.s - 0.01) k = i; }); return k; };
+const cueAt = (t) => D.cues.find((c) => t >= c.s && t < c.e) || null;
+
+function buildChapters() {
+  const ol = $("#chapters"); ol.textContent = "";
+  D.scenes.forEach((s, i) => {
+    const li = document.createElement("li"); const b = document.createElement("button");
+    b.type = "button"; b.className = "ch"; b.dataset.i = i;
+    b.innerHTML = '<span class="n"></span><span class="t"></span><span class="m"></span>';
+    b.querySelector(".n").textContent = String(i + 1).padStart(2, "0");
+    b.querySelector(".m").textContent = mmss(s.s);
+    b.addEventListener("click", () => { v.currentTime = s.s + 0.05; v.play().catch(() => {}); });
+    li.appendChild(b); ol.appendChild(li);
+  });
+}
+function renderStatic() {
+  const T = UI[ui];
+  document.documentElement.lang = ui;
+  document.querySelectorAll("[data-i]").forEach((el) => { if (UI.el[el.dataset.i] !== undefined) el.textContent = T[el.dataset.i]; });
+  document.querySelectorAll("[data-ia]").forEach((el) => { const k = el.dataset.ia; el.setAttribute("aria-label", k === "play" ? (v.paused ? T.play : T.pause) : T[k]); });
+  ["el", "en", "off"].forEach((k) => $("#b-" + k).setAttribute("aria-pressed", String(sub === k)));
+  document.querySelectorAll(".ch").forEach((b) => { b.querySelector(".t").textContent = D.scenes[+b.dataset.i][ui]; });
+  document.title = T.title;
+}
+function tick() {
+  const t = v.currentTime || 0, dur = v.duration || D.total;
+  const k = sceneAt(t), sc = D.scenes[k], cue = cueAt(t);
+  const showSub = sub !== "off";
+  const txt = cue && showSub ? cue[sub] : "";
+  const tover = $("#tover"); tover.textContent = showSub ? sc[sub] : ""; tover.style.opacity = showSub && t > sc.s + 0.3 && t < sc.e - 0.3 ? 1 : 0;
+  const co = $("#cover"); co.hidden = !txt; co.textContent = txt;
+  $("#bt").textContent = showSub ? sc[sub] : ""; $("#bp").textContent = txt;
+  $("#time").textContent = mmss(t) + " / " + mmss(dur);
+  if (!seeking) { $("#seek").max = dur; $("#seek").value = t; }
+  document.querySelectorAll(".ch").forEach((b) => b.setAttribute("aria-current", String(+b.dataset.i === k)));
+}
+let seeking = false, raf = 0;
+function loop() { tick(); raf = v.paused ? 0 : requestAnimationFrame(loop); }
+function syncPlay() {
+  $("#ico-play").hidden = !v.paused; $("#ico-pause").hidden = v.paused;
+  $("#big").hidden = !v.paused || v.currentTime > 0.5;
+  renderStatic();
+  if (!v.paused && !raf) raf = requestAnimationFrame(loop);
+}
+let vlang = null;
+const mqP = window.matchMedia("(max-width: 700px)");
+const vmode = () => (mqP.matches ? "v" : "h");
+function loadVideo(lang) {
+  const key = vmode() + lang;
+  if (key === vlang) return;
+  const first = vlang === null, t = first ? 0 : (v.currentTime || 0), wasPlaying = !first && !v.paused;
+  vlang = key; v.src = "altis-tour-" + (vmode() === "v" ? "v-" : "") + lang + ".mp4";
+  v.poster = vmode() === "v" ? "poster_v.jpg" : "poster.jpg";
+  $("#stage").classList.toggle("portrait", vmode() === "v");
+  if (!first) {
+    v.addEventListener("loadedmetadata", function once() { v.removeEventListener("loadedmetadata", once); try { v.currentTime = t; } catch (e) {} if (wasPlaying) v.play().catch(() => {}); });
+  }
+  v.load();
+}
+function setSub(s) { sub = s; if (s !== "off") { ui = s; loadVideo(s); } try { localStorage.setItem("altis-tour-sub", s); } catch (e) {} renderStatic(); tick(); }
+
+$("#seg").addEventListener("click", (e) => { const b = e.target.closest("button[data-s]"); if (b) setSub(b.dataset.s); });
+const toggle = () => { if (v.paused) v.play().catch(() => {}); else v.pause(); };
+$("#pp").addEventListener("click", toggle); $("#big").addEventListener("click", toggle); v.addEventListener("click", toggle);
+v.addEventListener("play", syncPlay); v.addEventListener("pause", syncPlay); v.addEventListener("ended", syncPlay);
+v.addEventListener("timeupdate", tick); v.addEventListener("loadedmetadata", tick); v.addEventListener("seeked", tick);
+$("#seek").addEventListener("input", (e) => { seeking = true; v.currentTime = +e.target.value; tick(); });
+$("#seek").addEventListener("change", () => { seeking = false; });
+$("#mute").addEventListener("click", () => { v.muted = !v.muted; $("#ico-snd").hidden = v.muted; $("#ico-mut").hidden = !v.muted; });
+if (document.fullscreenEnabled) {
+  $("#fs").addEventListener("click", () => { const st = $("#stage"); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else st.requestFullscreen().catch(() => {}); });
+} else { $("#fs").hidden = true; }
+document.addEventListener("keydown", (e) => { if (e.code === "Space" && e.target === document.body) { e.preventDefault(); toggle(); } });
+
+mqP.addEventListener && mqP.addEventListener("change", () => loadVideo(ui));
+loadVideo(ui); buildChapters(); renderStatic(); syncPlay(); tick();
+</script>
+
+</body></html>
