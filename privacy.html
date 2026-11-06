@@ -84,11 +84,11 @@
 
     <div data-lang-block="el" class="active">
       <p class="tagline">Πολιτική Απορρήτου</p>
-      <p class="updated">Τελευταία ενημέρωση: Σεπτέμβριος 2026</p>
+      <p class="updated">Τελευταία ενημέρωση: Νοέμβριος 2026</p>
 
       <div class="card">
         <h2>Τι είναι η Altis</h2>
-        <p>Η Altis («η Εφαρμογή») είναι μια εφαρμογή για την καταγραφή προγράμματος και κόστους φροντιστηρίων/δραστηριοτήτων παιδιών, που χρησιμοποιείται ιδιωτικά από την οικογένεια που τη δημιούργησε και από όσους καλεσμένους χρήστες την ανοίγουν.</p>
+        <p>Η Altis («η Εφαρμογή») είναι μια εφαρμογή για την καταγραφή προγράμματος και κόστους φροντιστηρίων/δραστηριοτήτων παιδιών, που χρησιμοποιείται ιδιωτικά από κάθε οικογένεια (έως 2 γονείς ανά οικογένεια). Τα δεδομένα κάθε οικογένειας είναι ξεχωριστά και δεν είναι ορατά σε άλλες οικογένειες.</p>
       </div>
 
       <div class="card">
@@ -96,30 +96,36 @@
         <p>Η Εφαρμογή αποθηκεύει τα δεδομένα που εισάγει ο χρήστης, όπως:</p>
         <ul>
           <li>Ονόματα μαθημάτων/δραστηριοτήτων, ημέρες, ώρες και κόστη</li>
-          <li>Τίτλους/ονόματα (π.χ. ονόματα παιδιών) που ο χρήστης καταχωρεί ο ίδιος</li>
+          <li>Ονόματα παιδιών που ο χρήστης καταχωρεί ο ίδιος</li>
+          <li>Το email και τον κωδικό του λογαριασμού (ο κωδικός φυλάσσεται κρυπτογραφημένος από την υπηρεσία Firebase Authentication και δεν είναι προσβάσιμος σε εμάς)</li>
           <li>Στοιχεία πληρωμών και εξοφλήσεων εντός της Εφαρμογής (μόνο ποσά, όχι στοιχεία τραπεζικών καρτών ή λογαριασμών)</li>
         </ul>
-        <p>Η Εφαρμογή <strong>δεν συλλέγει</strong> email, ονοματεπώνυμο λογαριασμού, τηλέφωνο ή άλλα προσωπικά στοιχεία ταυτοποίησης. Η σύνδεση με τη βάση δεδομένων γίνεται μέσω ανώνυμης πιστοποίησης (anonymous authentication), χωρίς εγγραφή λογαριασμού.</p>
+        <p>Το email χρησιμοποιείται μόνο για τη δημιουργία λογαριασμού, τη σύνδεση και την επαναφορά κωδικού (αποστέλλεται email επαναφοράς όταν το ζητήσεις). Η Εφαρμογή <strong>δεν συλλέγει</strong> τηλέφωνο, διεύθυνση, στοιχεία πληρωμής ή άλλα στοιχεία ταυτοποίησης, και δεν χρησιμοποιεί διαφημίσεις ή εργαλεία παρακολούθησης.</p>
       </div>
 
       <div class="card">
         <h2>Πού αποθηκεύονται τα δεδομένα</h2>
-        <p>Τα δεδομένα αποθηκεύονται στην υπηρεσία Firebase/Firestore της Google, με μεταφορά κρυπτογραφημένη (HTTPS). Η πρόσβαση στη βάση δεδομένων επιτρέπεται μόνο σε πιστοποιημένες (authenticated) συνδέσεις μέσω κανόνων ασφαλείας (security rules).</p>
+        <p>Τα δεδομένα αποθηκεύονται στην υπηρεσία Firebase/Firestore της Google, με μεταφορά κρυπτογραφημένη (HTTPS). Μέσω κανόνων ασφαλείας (security rules), τα δεδομένα κάθε οικογένειας μπορούν να διαβαστούν και να τροποποιηθούν μόνο από τα μέλη της συγκεκριμένης οικογένειας, μετά από σύνδεση με λογαριασμό.</p>
+      </div>
+
+      <div class="card">
+        <h2>Στατιστικά χρήσης</h2>
+        <p>Για να βελτιώνεται η Εφαρμογή, καταγράφονται απλά στατιστικά χρήσης: η ημερομηνία εγγραφής, η τελευταία επίσκεψη, ο αριθμός επισκέψεων, η γλώσσα και το πλήθος των παιδιών και των δραστηριοτήτων (μόνο αριθμοί, όχι ονόματα, μαθήματα ή ποσά). Συνδέονται με έναν τυχαίο κωδικό χρήστη και όχι με το email σου, και τα βλέπει μόνο ο διαχειριστής της Εφαρμογής. Διαγράφονται μαζί με τον λογαριασμό σου.</p>
       </div>
 
       <div class="card">
         <h2>Κοινή χρήση δεδομένων</h2>
-        <p>Τα δεδομένα δεν πωλούνται, δεν ενοικιάζονται και δεν διαμοιράζονται με τρίτους για διαφημιστικούς ή εμπορικούς σκοπούς. Είναι ορατά μόνο σε όσους έχουν τον σύνδεσμο ή την εγκατάσταση της συγκεκριμένης Εφαρμογής.</p>
+        <p>Τα δεδομένα δεν πωλούνται, δεν ενοικιάζονται και δεν διαμοιράζονται με τρίτους για διαφημιστικούς ή εμπορικούς σκοπούς. Είναι ορατά μόνο στα μέλη της οικογένειας (έως 2 χρήστες) που τα καταχώρισε.</p>
       </div>
 
       <div class="card">
         <h2>Διαγραφή δεδομένων</h2>
-        <p>Ο χρήστης μπορεί ανά πάσα στιγμή να διαγράψει καταχωρίσεις (μαθήματα, τίτλους, έκτακτες δραστηριότητες) απευθείας μέσα από την Εφαρμογή. Για πλήρη διαγραφή όλων των αποθηκευμένων δεδομένων, μπορεί να επικοινωνήσει στο παρακάτω email.</p>
+        <p>Ο χρήστης μπορεί ανά πάσα στιγμή να διαγράψει καταχωρίσεις (παιδιά, μαθήματα, έκτακτες δραστηριότητες) απευθείας μέσα από την Εφαρμογή. Μπορεί επίσης να διαγράψει οριστικά τον λογαριασμό του απευθείας από την Εφαρμογή (Λογαριασμός → Διαγραφή λογαριασμού). Αν είναι ο μόνος χρήστης της οικογένειας, διαγράφονται και όλα τα δεδομένα της οικογένειας· αν υπάρχει και δεύτερος γονιός, διαγράφεται μόνο ο λογαριασμός του και τα δεδομένα παραμένουν για τον άλλον. Για βοήθεια, μπορεί να επικοινωνήσει στο παρακάτω email.</p>
       </div>
 
       <div class="card">
         <h2>Παιδιά</h2>
-        <p>Η Εφαρμογή δεν απευθύνεται άμεσα σε παιδιά και δεν συλλέγει εν γνώσει της δεδομένα απευθείας από παιδιά. Τα ονόματα παιδιών που ενδέχεται να καταχωρούνται (π.χ. ως τίτλοι προγράμματος) εισάγονται από τον ενήλικο χρήστη/γονέα.</p>
+        <p>Η Εφαρμογή δεν απευθύνεται άμεσα σε παιδιά και δεν συλλέγει εν γνώσει της δεδομένα απευθείας από παιδιά. Τα ονόματα παιδιών που ενδέχεται να καταχωρούνται (π.χ. για την οργάνωση του προγράμματος) εισάγονται από τον ενήλικο χρήστη/γονέα.</p>
       </div>
 
       <div class="card">
@@ -130,11 +136,11 @@
 
     <div data-lang-block="en">
       <p class="tagline">Privacy Policy</p>
-      <p class="updated">Last updated: September 2026</p>
+      <p class="updated">Last updated: November 2026</p>
 
       <div class="card">
         <h2>What Altis is</h2>
-        <p>Altis ("the App") is an app for tracking the schedule and cost of children's tutoring lessons and activities, used privately by the family who built it and by any guest users who open it.</p>
+        <p>Altis ("the App") is an app for tracking the schedule and cost of children's tutoring lessons and activities, used privately by each family (up to 2 parents per family). Each family's data is kept separate and is not visible to other families.</p>
       </div>
 
       <div class="card">
@@ -142,30 +148,36 @@
         <p>The App stores the data entered by the user, such as:</p>
         <ul>
           <li>Lesson/activity names, days, times, and costs</li>
-          <li>Titles/names (e.g. children's names) entered by the user themselves</li>
+          <li>Children's names entered by the user themselves</li>
+          <li>The email and password of the account (the password is stored encrypted by Firebase Authentication and is not accessible to us)</li>
           <li>Payment and settlement records within the App (amounts only — no bank card or account details)</li>
         </ul>
-        <p>The App <strong>does not collect</strong> email addresses, account names, phone numbers, or other personal identifying information. Connection to the database uses anonymous authentication, with no account sign-up.</p>
+        <p>The email is used only to create the account, sign in and reset the password (a reset email is sent when you ask for it). The App <strong>does not collect</strong> phone numbers, addresses, payment details or other identifying information, and uses no advertising or tracking tools.</p>
       </div>
 
       <div class="card">
         <h2>Where data is stored</h2>
-        <p>Data is stored using Google's Firebase/Firestore service, transmitted over an encrypted connection (HTTPS). Database access is restricted to authenticated connections via security rules.</p>
+        <p>Data is stored using Google's Firebase/Firestore service, transmitted over an encrypted connection (HTTPS). Through security rules, each family's data can be read and changed only by the members of that family, after signing in with an account.</p>
+      </div>
+
+      <div class="card">
+        <h2>Usage statistics</h2>
+        <p>To improve the App, simple usage statistics are recorded: the sign-up date, last visit, number of visits, language, and the number of children and activities (numbers only, never names, lessons or amounts). They are linked to a random user ID and not to your email, and are visible only to the App's administrator. They are deleted together with your account.</p>
       </div>
 
       <div class="card">
         <h2>Data sharing</h2>
-        <p>Data is not sold, rented, or shared with third parties for advertising or commercial purposes. It is only visible to those who have the link or installation of this specific App.</p>
+        <p>Data is not sold, rented, or shared with third parties for advertising or commercial purposes. It is only visible to the members of the family (up to 2 users) who entered it.</p>
       </div>
 
       <div class="card">
         <h2>Data deletion</h2>
-        <p>Users can delete entries (lessons, titles, extra activities) at any time directly within the App. To request deletion of all stored data, contact the email below.</p>
+        <p>Users can delete entries (children, lessons, extra activities) at any time directly within the App. Users can also permanently delete their account directly in the App (Account → Delete account). If they are the only user of the family, all of the family's data is deleted too; if a second parent is present, only that user's account is deleted and the data remains for the other parent. For help, contact the email below.</p>
       </div>
 
       <div class="card">
         <h2>Children</h2>
-        <p>The App is not directed at children and does not knowingly collect data directly from children. Any children's names that may be entered (e.g. as schedule titles) are entered by the adult user/parent.</p>
+        <p>The App is not directed at children and does not knowingly collect data directly from children. Any children's names that may be entered (e.g. to organise the schedule) are entered by the adult user/parent.</p>
       </div>
 
       <div class="card">
