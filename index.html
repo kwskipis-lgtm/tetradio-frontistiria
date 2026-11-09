@@ -225,7 +225,7 @@ const STRINGS = {
     signOut: "Αποσύνδεση",
     tapHint: "Πάτα σε μια ημέρα του ημερολογίου για να ακυρώσεις ή να εξοφλήσεις ένα συγκεκριμένο μάθημα.",
     saveFail: "Η αποθήκευση απέτυχε. Δοκίμασε ξανά.",
-    nameRequired: "Γράψε πρώτα το όνομα της δραστηριότητας (πάνω-πάνω στη φόρμα).", costInvalid: "Βάλε ένα έγκυρο κόστος.",
+    nameRequired: "Γράψε πρώτα το όνομα της δραστηριότητας (πάνω-πάνω στη φόρμα).", costInvalid: "Βάλε ένα έγκυρο κόστος.", datesInvalid: "Η ημερομηνία λήξης είναι πριν από την έναρξη.", slotInvalid: "Η ώρα λήξης πρέπει να είναι μετά την ώρα έναρξης.", crashTitle: "Κάτι πήγε στραβά", crashText: "Τα δεδομένα σου είναι ασφαλή. Κάνε ανανέωση της σελίδας.", crashBtn: "Ανανέωση",
     extraTag: "έκτακτο", cancelledTag: "ακυρώθηκε", paidTag: "εξοφλήθηκε", partialTag: "μερική εξόφληση",
     billedMonthly: "χρεώνεται μηνιαία",
     fullSettle: "Πλήρης εξόφληση", undoPayment: "Αναίρεση πληρωμής",
@@ -347,7 +347,7 @@ const STRINGS = {
     signOut: "Sign out",
     tapHint: "Tap a day on the calendar to cancel or settle a specific lesson.",
     saveFail: "Save failed. Please try again.",
-    nameRequired: "Enter the activity name first (at the top of the form).", costInvalid: "Enter a valid cost.",
+    nameRequired: "Enter the activity name first (at the top of the form).", costInvalid: "Enter a valid cost.", datesInvalid: "The end date is before the start date.", slotInvalid: "The end time must be after the start time.", crashTitle: "Something went wrong", crashText: "Your data is safe. Please reload the page.", crashBtn: "Reload",
     extraTag: "extra", cancelledTag: "cancelled", paidTag: "paid", partialTag: "partial payment",
     billedMonthly: "billed monthly",
     fullSettle: "Mark as paid", undoPayment: "Undo payment",
@@ -725,7 +725,7 @@ function TutoringLedger() {
 
   const key = monthKey(cursor);
   const label = `${MONTHS[lang][cursor.getMonth()]} ${cursor.getFullYear()}`;
-  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const todayISO = useMemo(() => localISO(new Date()), []);
   const todayD = useMemo(() => new Date(), []);
   const monthStarted =
     cursor.getFullYear() < todayD.getFullYear() ||
@@ -1786,7 +1786,7 @@ function SubjectForm({ lang, settings, subject, children, onCancel, onSave }) {
     </>
   );
 
-  function addSlot() { setSlots([...slots, { id: uid(), weekday: Number(newWeekday), start: newStart, end: newEnd, takenBy: newTaker }]); }
+  function addSlot() { if (!newStart || !newEnd || newEnd <= newStart) { setFormError(t.slotInvalid); return; } setFormError(""); setSlots([...slots, { id: uid(), weekday: Number(newWeekday), start: newStart, end: newEnd, takenBy: newTaker }]); }
   function setSlotTaker(id, v) { setSlots(slots.map((x) => (x.id === id ? { ...x, takenBy: v } : x))); }
   function removeSlot(id) { setSlots(slots.filter((s) => s.id !== id)); }
 
@@ -1882,6 +1882,7 @@ function SubjectForm({ lang, settings, subject, children, onCancel, onSave }) {
           onClick={() => {
             if (!name.trim()) { setFormError(t.nameRequired); try { nameRef.current && nameRef.current.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {} return; }
             if (!(Number(cost) >= 0) || String(cost).trim() === "") { setFormError(t.costInvalid); return; }
+            if (startDate && endDate && endDate < startDate) { setFormError(t.datesInvalid); return; }
             setFormError("");
             onSave({ id: subject.id, name: name.trim(), cost: Number(cost), billing, category, childId: childId || null, startDate: startDate || "", endDate: endDate || "", slots, reminderMinutes: reminder, ...(subject.createdAt ? { createdAt: subject.createdAt } : (!subject.name ? { createdAt: Date.now() } : {})) });
           }}
@@ -1896,7 +1897,7 @@ function SubjectForm({ lang, settings, subject, children, onCancel, onSave }) {
 
 function ExtraLessonModal({ lang, subjects, children, onClose, onSave }) {
   const t = STRINGS[lang];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISO(new Date());
   const [subjectId, setSubjectId] = useState(subjects[0]?.id || "");
   const [name, setName] = useState(subjects[0]?.name || "");
   const [category, setCategory] = useState(subjects[0]?.category || CATEGORIES[0]);
@@ -2718,7 +2719,24 @@ function ImportOldData({ user, onClose, onImported }) {
   );
 }
 
-root.render(<AppGate />);
+class ErrorBoundary extends React.Component {
+  constructor(p) { super(p); this.state = { err: false }; }
+  static getDerivedStateFromError() { return { err: true }; }
+  componentDidCatch(e) { try { console.error(e); } catch (x) {} }
+  render() {
+    if (!this.state.err) return this.props.children;
+    let l = "el"; try { l = localStorage.getItem("altis_lang") === "en" ? "en" : "el"; } catch (x) {}
+    const t = STRINGS[l];
+    return (
+      <div style={{ padding: 32, textAlign: "center", fontFamily: "system-ui, sans-serif", color: "#20293A" }}>
+        <h2 style={{ margin: "40px 0 8px" }}>{t.crashTitle}</h2>
+        <p style={{ color: "#6B6455" }}>{t.crashText}</p>
+        <button onClick={() => window.location.reload()} style={{ padding: "10px 18px", borderRadius: 8, border: "none", background: "#20293A", color: "#F7F5EF", fontSize: 14 }}>{t.crashBtn}</button>
+      </div>
+    );
+  }
+}
+root.render(<ErrorBoundary><AppGate /></ErrorBoundary>);
 </script>
 </body>
 </html>
