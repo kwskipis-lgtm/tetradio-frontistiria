@@ -2207,6 +2207,7 @@ const AUTH = {
       "auth/too-many-requests": "Πολλές αποτυχημένες προσπάθειες. Δοκίμασε ξανά σε λίγο.",
     },
     generic: "Κάτι πήγε στραβά. Δοκίμασε ξανά.",
+    joinDenied: "Δεν επιτρέπεται η συμμετοχή: η οικογένεια έχει ήδη 2 χρήστες, ή οι κανόνες της βάσης δεν επιτρέπουν την ενέργεια.",
     fillBoth: "Συμπλήρωσε email και κωδικό.", fillEmail: "Γράψε πρώτα το email σου.",
     resetTitle: "Επαναφορά κωδικού",
     resetSentMsg: "Αν υπάρχει λογαριασμός με αυτό το email, σου στείλαμε ένα μήνυμα με σύνδεσμο για να φτιάξεις νέο κωδικό. Έλεγξε και τα Ανεπιθύμητα/Spam.",
@@ -2240,6 +2241,7 @@ const AUTH = {
       "auth/too-many-requests": "Too many failed attempts. Please try again in a moment.",
     },
     generic: "Something went wrong. Please try again.",
+    joinDenied: "Joining is not allowed: the family already has 2 users, or the database rules do not permit it.",
     fillBoth: "Enter your email and password.", fillEmail: "Enter your email first.",
     resetTitle: "Reset password",
     resetSentMsg: "If an account exists with this email, we've sent you a message with a link to set a new password. Check your Spam folder too.",
@@ -2434,7 +2436,8 @@ function FamilySetupScreen({ user, onResolved }) {
       await db.collection("app_users").doc(user.uid).set({ email: user.email, familyId: code }, { merge: true });
       onResolved(code);
     } catch (e) {
-      setError(a.generic);
+      const c = (e && e.code) || "";
+      setError(c === "permission-denied" ? a.joinDenied : a.generic + (c ? " (" + c + ")" : ""));
     }
     setBusy(false);
   }
